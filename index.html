@@ -27,10 +27,41 @@
             box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
         }
 
+        .contact-card.jiggle {
+            animation: jiggle 0.5s ease-in-out;
+        }
+
+        @keyframes jiggle {
+            0%, 100% { transform: rotate(0deg); }
+            10% { transform: rotate(-2deg); }
+            20% { transform: rotate(2deg); }
+            30% { transform: rotate(-2deg); }
+            40% { transform: rotate(2deg); }
+            50% { transform: rotate(-2deg); }
+            60% { transform: rotate(2deg); }
+            70% { transform: rotate(-1deg); }
+            80% { transform: rotate(1deg); }
+            90% { transform: rotate(-1deg); }
+        }
+
         h1 {
             margin: 0 0 10px 0;
             font-size: 32px;
             color: black;
+            cursor: default;
+        }
+
+        h1 .char {
+            display: inline-block;
+        }
+
+        h1.bouncing .char {
+            animation: bounce 0.5s ease-in-out forwards;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
 
         .info-item {
@@ -147,7 +178,7 @@
 </head>
 <body>
 <div class="contact-card">
-    <h1>Luna Maltseva</h1>
+    <h1 id="name">Luna Maltseva</h1>
     <p>/ˈlunə mɔlˈtsɛvɑ/</p>
 
     <div class="info-item">
@@ -167,5 +198,45 @@
         <a href="mailto:luna@lunamaltseva.dev" class="email-button">Email Me</a>
     </div>
 </div>
+
+<script>
+    const h1 = document.getElementById('name');
+    const card = document.querySelector('.contact-card');
+    const body = document.body;
+
+    const text = h1.textContent;
+    h1.innerHTML = '';
+    for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.textContent = text[i];
+        if (text[i] === ' ') {
+            span.style.width = '0.25em';
+        }
+        span.style.animationDelay = (i * 0.05) + 's';
+        h1.appendChild(span);
+    }
+
+    let isAnimating = false;
+    h1.addEventListener('mouseenter', () => {
+        if (!isAnimating) {
+            isAnimating = true;
+            h1.classList.add('bouncing');
+            setTimeout(() => {
+                h1.classList.remove('bouncing');
+                isAnimating = false;
+            }, 500 + (text.length * 50));
+        }
+    });
+
+    body.addEventListener('click', (e) => {
+        if (!card.contains(e.target)) {
+            card.classList.add('jiggle');
+            setTimeout(() => {
+                card.classList.remove('jiggle');
+            }, 500);
+        }
+    });
+</script>
 </body>
 </html>
