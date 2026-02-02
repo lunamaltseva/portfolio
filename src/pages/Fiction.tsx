@@ -124,7 +124,7 @@ export default function Fiction() {
         </p>
 
         <a
-          href="/portfolio/Thezeraine.pdf"
+          href="/Thezeraine.pdf"
           target="_blank"
           rel="noopener noreferrer"
           style={{
