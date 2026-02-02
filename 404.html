@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <title>Luna Maltseva</title>
     <script>
-      // Redirect to base URL with path preserved for React Router
-      const path = window.location.pathname;
-      window.location.replace('/' + (path === '/' ? '' : '?redirect=' + path));
+      // Store the path in sessionStorage and redirect to index
+      sessionStorage.setItem('redirectPath', window.location.pathname + window.location.search);
+      window.location.replace('/');
     </script>
   </head>
   <body>
