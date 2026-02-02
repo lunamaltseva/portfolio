@@ -6,14 +6,14 @@ interface CardButton {
 interface CategoryCardProps {
   title: string;
   subtitle: string;
-  color: string;
+  color?: string;
   buttons: CardButton[];
 }
 
-export default function CategoryCard({ title, subtitle, color, buttons }: CategoryCardProps) {
+export default function CategoryCard({ title, subtitle, buttons }: CategoryCardProps) {
   return (
     <div className="category-card">
-      <div className="card-header" style={{ backgroundColor: color }}>
+      <div className="card-header">
         <h3 className="card-title">{title}</h3>
       </div>
       <div className="card-body">

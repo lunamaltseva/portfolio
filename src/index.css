@@ -68,6 +68,14 @@ body {
   min-height: 100vh;
 }
 
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
 a {
   text-decoration: none;
   color: inherit;
@@ -176,11 +184,15 @@ a:hover {
 /* Main Content */
 .main-content {
   flex: 1;
-  padding: 3rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 0;
   width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
 }
+
 
 .page-title {
   font-size: 2.5rem;
@@ -218,6 +230,8 @@ a:hover {
   border-top: 1px solid var(--color-white);
   padding: 1.5rem 2rem;
   margin-top: auto;
+  position: relative;
+  z-index: 30;
 }
 
 .footer-container {
@@ -250,14 +264,21 @@ a:hover {
 /* Hero Styles */
 .hero {
   text-align: center;
-  padding: 2rem 0 3rem 0;
+  padding: 6rem 2rem;
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .hero-title {
   font-family: var(--font-title);
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 700;
-  color: var(--color-black);
+  color: var(--color-white);
   margin: 0 0 1rem 0;
   letter-spacing: -0.03em;
 }
@@ -270,45 +291,94 @@ a:hover {
 .hero-subtitle {
   display: flex;
   justify-content: center;
-  gap: 2.5rem;
-  font-size: 1.25rem;
-  color: var(--color-gray);
+  font-size: 1.5rem;
+  color: var(--color-white);
   margin: 0;
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  min-height: 2.5rem;
+  overflow: hidden;
 }
 
-.hero-subtitle span {
-  text-transform: uppercase;
+.flip-word {
+  display: inline-block;
+}
+
+.flip-word.slide-in {
+  animation: slideIn 0.25s ease-out forwards;
+}
+
+.flip-word.slide-out {
+  animation: slideOut 0.25s ease-in forwards;
+}
+
+@keyframes slideIn {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+/* Cards Wrapper - fixed just above footer */
+.cards-wrapper {
+  position: fixed;
+  bottom: 90px;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  padding: 0 2rem;
 }
 
 /* Cards Container */
 .cards-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 3rem;
+  gap: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 /* Category Card Styles */
 .category-card {
-  background-color: var(--color-white);
-  border: 2px solid var(--color-black);
-  border-radius: 0;
-  overflow: visible;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  background-color: var(--color-black);
+  border: 2px solid var(--color-white);
+  border-radius: 1rem 1rem 0 0;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  min-height: 400px;
+  height: 320px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  transform: translateY(250px);
+  cursor: pointer;
 }
 
 .category-card:hover {
-  transform: translate(0, -5px);
-  box-shadow: 0 5px 0 var(--color-black);
+  transform: translateY(0);
 }
 
 .card-header {
   padding: 1.25rem 1.5rem;
+  background-color: var(--color-black);
+  min-height: 70px;
+  box-sizing: border-box;
 }
 
 .card-title {
@@ -327,11 +397,12 @@ a:hover {
   flex-direction: column;
   gap: 1.5rem;
   flex: 1;
+  background-color: var(--color-black);
 }
 
 .card-subtitle {
-  color: var(--color-black);
-  font-size: 1.1rem;
+  color: var(--color-white);
+  font-size: 1rem;
   margin: 0;
   text-align: left;
   line-height: 1.6;
@@ -347,9 +418,9 @@ a:hover {
 .card-button {
   display: block;
   padding: 0.75rem 1rem;
-  background-color: var(--color-black);
-  color: var(--color-white);
-  border: 1px solid var(--color-black);
+  background-color: var(--color-white);
+  color: var(--color-black);
+  border: 1px solid var(--color-white);
   border-radius: 0;
   font-size: 1rem;
   text-align: center;
