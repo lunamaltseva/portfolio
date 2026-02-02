@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import Hero from './components/Hero';
 import CategoryCard from './components/CategoryCard';
 import Fiction from './pages/Fiction';
+import About from './pages/About';
 
 const categories = [
   {
@@ -64,6 +65,7 @@ function App() {
             <HomePage />
           </main>
         } />
+        <Route path="/about" element={<About />} />
         <Route path="/writing/fiction" element={<Fiction />} />
       </Routes>
       <Footer />

@@ -17,7 +17,6 @@ const navItems: NavItem[] = [
     label: 'Writing',
     dropdown: [
       { label: 'Academic', href: '/writing/academic' },
-      { label: 'Publications', href: '/writing/publications' },
       { label: 'Fiction', href: '/writing/fiction' },
     ],
   },
