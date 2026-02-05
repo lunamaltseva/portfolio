@@ -7,13 +7,42 @@ export default function Fiction() {
 
   return (
     <div style={{
+      position: 'relative',
       backgroundColor: '#000000',
       minHeight: 'calc(100vh - 150px)',
       display: 'flex',
       alignItems: 'flex-end',
-      padding: '3rem'
+      padding: '3rem',
+      overflow: 'hidden'
     }}>
-      <div style={{ maxWidth: '600px' }}>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: 0
+        }}
+      >
+        <source src="/Thezeraine.mp4" type="video/mp4" />
+      </video>
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        height: '50%',
+        background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%)',
+        zIndex: 1,
+        pointerEvents: 'none'
+      }} />
+      <div style={{ maxWidth: '600px', position: 'relative', zIndex: 2 }}>
         <h1 style={{
           fontFamily: 'Thezeraine, serif',
           fontSize: '4rem',
@@ -52,7 +81,7 @@ export default function Fiction() {
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            <span>2025-2026</span>
+            <span>2025-20XX</span>
           </div>
 
           <div style={{

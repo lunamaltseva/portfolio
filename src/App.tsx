@@ -3,8 +3,8 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Hero from './components/Hero';
 import CategoryCard from './components/CategoryCard';
-import PrismaticBurst from './components/PrismaticBurst';
 import Fiction from './pages/Fiction';
+import Academic from './pages/Academic';
 import About from './pages/About';
 
 const categories = [
@@ -35,7 +35,7 @@ const categories = [
       { label: 'GitHub', href: 'https://github.com' },
     ],
   },
-];
+]; //
 
 function App() {
   return (
@@ -44,19 +44,7 @@ function App() {
       <Routes>
         <Route path="/" element={
           <main className="main-content">
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: '#080808' }}>
-              <PrismaticBurst
-                animationType="rotate3d"
-                intensity={0.6}
-                speed={0.8}
-                distort={0.4}
-                rayCount={14}
-                mixBlendMode="screen"
-                colors={['#151515', '#1a1a1a', '#1f1f1f', '#181818', '#1c1c1c', '#151515']}
-                grain={0.08}
-                saturation={0.2}
-              />
-            </div>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: '#000000' }} />
             <Hero />
             <div className="cards-wrapper">
               <div className="cards-container">
@@ -75,6 +63,7 @@ function App() {
         } />
         <Route path="/about" element={<About />} />
         <Route path="/writing/fiction" element={<Fiction />} />
+        <Route path="/writing/academic" element={<Academic />} />
       </Routes>
       <Footer />
     </div>
