@@ -20,13 +20,7 @@ const navItems: NavItem[] = [
       { label: 'Fiction', href: '/writing/fiction' },
     ],
   },
-  {
-    label: 'Design',
-    dropdown: [
-      { label: 'Commissioned', href: '/design/commissioned' },
-      { label: 'Personal', href: '/design/personal' },
-    ],
-  },
+  { label: 'Design', href: '/design' },
   { label: 'Programming', href: '/programming' },
 ];
 

@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(powershell.exe -File - <<'PSEOF'\nAdd-Type -AssemblyName System.Drawing\n$dir = \"c:\\\\Users\\\\light\\\\WebstormProjects\\\\portfolio\\\\public\\\\design\"\nGet-ChildItem \"$dir\\\\*.png\" | ForEach-Object {\n    $img = [System.Drawing.Image]::FromFile\\($_.FullName\\)\n    Write-Output \"$\\($_.Name\\): $\\($img.Width\\)x$\\($img.Height\\)\"\n    $img.Dispose\\(\\)\n}\nPSEOF)"
     ]
   }
 }

@@ -15,23 +15,6 @@ export default function Fiction() {
       padding: '3rem',
       overflow: 'hidden'
     }}>
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          zIndex: 0
-        }}
-      >
-        <source src="/Thezeraine.mp4" type="video/mp4" />
-      </video>
       <div style={{
         position: 'absolute',
         bottom: 0,

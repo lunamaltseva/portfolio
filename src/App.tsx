@@ -6,6 +6,8 @@ import CategoryCard from './components/CategoryCard';
 import Fiction from './pages/Fiction';
 import Academic from './pages/Academic';
 import About from './pages/About';
+import Design from './pages/Design';
+import Programming from './pages/Programming';
 
 const categories = [
   {
@@ -19,11 +21,10 @@ const categories = [
   },
   {
     title: 'Design',
-    subtitle: 'Commissioned and personal design work.',
+    subtitle: 'A collection of commissioned and personal design work.',
     color: '#7820c5',
     buttons: [
-      { label: 'Commissioned', href: '/design/commissioned' },
-      { label: 'Personal', href: '/design/personal' },
+      { label: 'Design', href: '/design' },
     ],
   },
   {
@@ -32,7 +33,6 @@ const categories = [
     color: '#3e36a7',
     buttons: [
       { label: 'Projects', href: '/programming' },
-      { label: 'GitHub', href: 'https://github.com' },
     ],
   },
 ]; //
@@ -64,6 +64,8 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/writing/fiction" element={<Fiction />} />
         <Route path="/writing/academic" element={<Academic />} />
+        <Route path="/design" element={<Design />} />
+        <Route path="/programming" element={<Programming />} />
       </Routes>
       <Footer />
     </div>

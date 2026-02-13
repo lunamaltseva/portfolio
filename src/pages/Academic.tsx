@@ -74,7 +74,7 @@ interface AcademicSection {
 const sections: AcademicSection[] = [
   {
     title: 'Publications',
-    description: 'Published works in academic journals and conferences.',
+    description: 'Published works in academic journals and repositories.',
     items: [
       {
         title: 'PEDAGOGICAL FOUNDATIONS OF ENSURING CYBERSECURITY OF SCHOOLCHILDREN IN THE CONTEXT OF DIGITAL TRANSFORMATION OF EDUCATION',
@@ -83,6 +83,14 @@ const sections: AcademicSection[] = [
         date: 'January 2026',
         description: 'The article examines the theoretical and pedagogical foundations for developing a culture of cybersecurity among schoolchildren in the context of the digital transformation of education. It substantiates the need to incorporate issues of digital and information security into the content of general education. The key pedagogical approaches, methods, and conditions that ensure the formation of safe and responsible student behavior in the digital environment are analyzed. A model for ensuring students’ cybersecurity is presented, outlining the stages of cybersecurity development—from defining the goal to achieving the final outcome. Special attention is given to the role of pedagogical support, the improvement of teachers’ digital literacy, and the creation of an educational environment aimed at fostering students’ competence in the field of cybersecurity. Practical recommendations for improving the student cybersecurity system are provided. The material offers a conceptual analysis and synthesis of current pedagogical approaches.',
         pdfUrl: '/PEDAGOGICAL FOUNDATIONS OF ENSURING CYBERSECURITY.pdf',
+      },
+      {
+        title: 'Grant Program Result Prediction: a Real-Time Management System to Estimate Results for a Given Budget',
+        language: 'English',
+        publication: 'AUCA Digital Repository',
+        date: 'December 2026',
+        description: 'The integration of ARTeMiS by AUCA’s Center for Civic Engagement (CCE) as a management system for their Student Initiative Development Program (SIDP) grant program landmarks a steep increase in the SIDP Committee Members’ ability to make data-driven judgement calls. However, the system can be further improved by providing forecasts of the potential impact each project will have, wherefrom arises the need for a grant result program prediction. This paper will use regression, data mining, and dynamic programming to estimate the optimal allocation of budget to yield maximal impact.',
+        pdfUrl: '/Grant Program Result Prediction.pdf',
       },
     ],
   },
@@ -124,7 +132,7 @@ const sections: AcademicSection[] = [
   },
   {
     title: 'Articles',
-    description: 'Opinion pieces and editorials.',
+    description: 'Opinion pieces, mock-journalistic articles, and misc.',
     items: [
       {
         title: 'Beyond The Books: Project-Based Learning at AUCA',
@@ -137,10 +145,18 @@ const sections: AcademicSection[] = [
       {
         title: 'The New Advising System Is a Disaster',
         language: 'English',
-        publication: 'The Newstar - Rejected',
+        publication: 'The Newstar - Rejected [Due to Being "Too Critical"]',
         date: 'October 2024',
         description: 'In 2024, the administration of the American University of Central Asia removed student-to-student advising. What are the consequences of this decision?',
         pdfUrl: '/The New Advising System Is a Disaster.pdf',
+      },
+      {
+        title: 'Delta One',
+        language: 'English',
+        publication: 'N/A',
+        date: 'July 2023',
+        description: 'A structured approach to English I put together in 2023.',
+        pdfUrl: '/D1.pdf',
       },
     ],
   },
