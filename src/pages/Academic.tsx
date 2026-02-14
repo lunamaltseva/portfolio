@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -81,7 +82,7 @@ const sections: AcademicSection[] = [
         language: 'Russian',
         publication: 'ALATOO ACADEMIC STUDIES',
         date: 'January 2026',
-        description: 'The article examines the theoretical and pedagogical foundations for developing a culture of cybersecurity among schoolchildren in the context of the digital transformation of education. It substantiates the need to incorporate issues of digital and information security into the content of general education. The key pedagogical approaches, methods, and conditions that ensure the formation of safe and responsible student behavior in the digital environment are analyzed. A model for ensuring students’ cybersecurity is presented, outlining the stages of cybersecurity development—from defining the goal to achieving the final outcome. Special attention is given to the role of pedagogical support, the improvement of teachers’ digital literacy, and the creation of an educational environment aimed at fostering students’ competence in the field of cybersecurity. Practical recommendations for improving the student cybersecurity system are provided. The material offers a conceptual analysis and synthesis of current pedagogical approaches.',
+        description: 'The article examines the theoretical and pedagogical foundations for developing a culture of cybersecurity among schoolchildren in the context of the digital transformation of education. It substantiates the need to incorporate issues of digital and information security into the content of general education. The key pedagogical approaches, methods, and conditions that ensure the formation of safe and responsible student behavior in the digital environment are analyzed. A model for ensuring students\' cybersecurity is presented, outlining the stages of cybersecurity development—from defining the goal to achieving the final outcome. Special attention is given to the role of pedagogical support, the improvement of teachers\' digital literacy, and the creation of an educational environment aimed at fostering students\' competence in the field of cybersecurity. Practical recommendations for improving the student cybersecurity system are provided. The material offers a conceptual analysis and synthesis of current pedagogical approaches.',
         pdfUrl: '/PEDAGOGICAL FOUNDATIONS OF ENSURING CYBERSECURITY.pdf',
       },
       {
@@ -89,7 +90,7 @@ const sections: AcademicSection[] = [
         language: 'English',
         publication: 'AUCA Digital Repository',
         date: 'December 2026',
-        description: 'The integration of ARTeMiS by AUCA’s Center for Civic Engagement (CCE) as a management system for their Student Initiative Development Program (SIDP) grant program landmarks a steep increase in the SIDP Committee Members’ ability to make data-driven judgement calls. However, the system can be further improved by providing forecasts of the potential impact each project will have, wherefrom arises the need for a grant result program prediction. This paper will use regression, data mining, and dynamic programming to estimate the optimal allocation of budget to yield maximal impact.',
+        description: 'The integration of ARTeMiS by AUCA\'s Center for Civic Engagement (CCE) as a management system for their Student Initiative Development Program (SIDP) grant program landmarks a steep increase in the SIDP Committee Members\' ability to make data-driven judgement calls. However, the system can be further improved by providing forecasts of the potential impact each project will have, wherefrom arises the need for a grant result program prediction. This paper will use regression, data mining, and dynamic programming to estimate the optimal allocation of budget to yield maximal impact.',
         pdfUrl: '/Grant Program Result Prediction.pdf',
       },
     ],
@@ -101,9 +102,9 @@ const sections: AcademicSection[] = [
       {
         title: 'Harmony or Hegemony: A Study of the Overwhelming Approval of the Social Credit System by Chinese Citizens',
         language: 'English',
-        publication: 'Course: China’s Foreign Policy',
+        publication: 'Course: China\'s Foreign Policy',
         date: 'December 2024',
-        description: 'Despite the diabolical portrayal the Chinese Social Credit System (SCS) received in Western democratic media, recent surveys have shown that less than one percent of Chinese citizens disapprove of the SCS. To find the grassroots of this astounding statistic, this paper delves into Chinese culture, exploring its notion of privacy and civil ideals, as well as analyzing Chinese history, the Chinese crisis of trust, and the radical steps the Chinese Communist Party has taken to bring the situation under control. This paper will argue that Chinese citizens overwhelmingly approve of the SCS because of the Chinese Communist Party’s media control, social deterrence, and authority.',
+        description: 'Despite the diabolical portrayal the Chinese Social Credit System (SCS) received in Western democratic media, recent surveys have shown that less than one percent of Chinese citizens disapprove of the SCS. To find the grassroots of this astounding statistic, this paper delves into Chinese culture, exploring its notion of privacy and civil ideals, as well as analyzing Chinese history, the Chinese crisis of trust, and the radical steps the Chinese Communist Party has taken to bring the situation under control. This paper will argue that Chinese citizens overwhelmingly approve of the SCS because of the Chinese Communist Party\'s media control, social deterrence, and authority.',
         pdfUrl: '/Harmony or Hegemony.pdf',
       },
     ],
@@ -117,7 +118,7 @@ const sections: AcademicSection[] = [
         language: 'English',
         publication: 'Course: First Year Seminar I',
         date: 'December 2023',
-        description: 'Both Prometheus and Frankenstein were oblivious of their mortal status, and deserve punishment from their superiors precisely for their repeated, arrogant, and inconsiderate attempts of grandeur. The essay delves into the predicaments one is “funneled into” by fate, and whether the individuals themselves can be held accountable for their actions. With thorough and rigorous examination of the conditions Prometheus and Victor Frankenstein “discover” themselves in, this essay definitively asserts that encountering repercussions from others as a result of one’s recklessness is not only justified, but deserved.',
+        description: 'Both Prometheus and Frankenstein were oblivious of their mortal status, and deserve punishment from their superiors precisely for their repeated, arrogant, and inconsiderate attempts of grandeur. The essay delves into the predicaments one is "funneled into" by fate, and whether the individuals themselves can be held accountable for their actions. With thorough and rigorous examination of the conditions Prometheus and Victor Frankenstein "discover" themselves in, this essay definitively asserts that encountering repercussions from others as a result of one\'s recklessness is not only justified, but deserved.',
         pdfUrl: '/The Antique and the Modern Prometheis.pdf',
       },
       {
@@ -162,23 +163,19 @@ const sections: AcademicSection[] = [
   },
 ];
 
-function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: AcademicItem; id?: string; highlighted?: boolean; expanded: boolean; onToggle: () => void }) {
+function ItemCard({ item, id, highlighted, expanded, onToggle, isMobile }: { item: AcademicItem; id?: string; highlighted?: boolean; expanded: boolean; onToggle: () => void; isMobile: boolean }) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number>(24); // ~1.6em in pixels
+  const [contentHeight, setContentHeight] = useState<number>(24);
 
   useEffect(() => {
     if (contentRef.current) {
       if (expanded) {
-        // Expanding: set to full scrollHeight
         setContentHeight(contentRef.current.scrollHeight);
       } else {
-        // Collapsing: first set to current full height, then collapse after a tick
         const fullHeight = contentRef.current.scrollHeight;
         setContentHeight(fullHeight);
-
-        // Use setTimeout to ensure the browser has painted the full height first
         setTimeout(() => {
-          setContentHeight(24); // Collapsed height in pixels (~1.6em)
+          setContentHeight(24);
         }, 10);
       }
     }
@@ -187,6 +184,7 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
   return (
     <div id={id} style={{
       display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
       backgroundColor: highlighted ? '#1a1a1a' : '#141414',
       borderRadius: '0.75rem',
       border: highlighted ? '2px solid #888' : '1px solid #222',
@@ -198,7 +196,7 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
         style={{
           flex: 1,
           minWidth: 0,
-          padding: '1.5rem',
+          padding: isMobile ? '1rem' : '1.5rem',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.4rem',
@@ -208,7 +206,7 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
       >
         <h3 style={{
           fontFamily: 'CustomRegularBold, sans-serif',
-          fontSize: '1.15rem',
+          fontSize: isMobile ? '1rem' : '1.15rem',
           color: '#ffffff',
           margin: 0,
           overflow: 'hidden',
@@ -254,16 +252,18 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
         </div>
       </div>
 
-      <div style={{
-        width: '100px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem 0.5rem',
-        flexShrink: 0,
-      }}>
-        <PdfPreview url={item.pdfUrl} />
-      </div>
+      {!isMobile && (
+        <div style={{
+          width: '100px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem 0.5rem',
+          flexShrink: 0,
+        }}>
+          <PdfPreview url={item.pdfUrl} />
+        </div>
+      )}
 
       <a
         href={encodeURI(item.pdfUrl)}
@@ -274,8 +274,9 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.5rem',
-          padding: '0 1.5rem',
-          borderLeft: '1px solid #222',
+          padding: isMobile ? '0.75rem 1rem' : '0 1.5rem',
+          borderLeft: isMobile ? 'none' : '1px solid #222',
+          borderTop: isMobile ? '1px solid #222' : 'none',
           color: '#ffffff',
           fontSize: '0.95rem',
           textDecoration: 'none',
@@ -306,11 +307,11 @@ function ItemCard({ item, id, highlighted, expanded, onToggle }: { item: Academi
 }
 
 export default function Academic() {
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState(sections[0].title);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const isNavigatingRef = useRef(false);
-  // Track expanded rows: key is "sectionId-rowIndex"
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -353,16 +354,13 @@ export default function Academic() {
     setHighlightedId(id);
 
     if (isSection) {
-      // Clear item selection when navigating to section
       setActiveItemId(null);
     } else {
-      // Set item as active when navigating to item
       setActiveItemId(id);
     }
 
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-    // Reset navigation flag after scroll completes
     setTimeout(() => {
       isNavigatingRef.current = false;
     }, 1000);
@@ -372,102 +370,105 @@ export default function Academic() {
     <div style={{
       backgroundColor: '#000000',
       minHeight: '100vh',
-      padding: '3rem 3rem 3rem 5rem',
+      padding: isMobile ? '1.5rem' : '3rem 3rem 3rem 5rem',
       display: 'flex',
-      gap: '3rem',
+      gap: isMobile ? '0' : '3rem',
+      flexDirection: isMobile ? 'column' : 'row',
     }}>
-      <nav style={{
-        position: 'fixed',
-        top: '6rem',
-        left: '2rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        borderRight: '1px solid #222',
-        paddingRight: '1.5rem',
-        zIndex: 10,
-        maxHeight: 'calc(100vh - 8rem)',
-        overflowY: 'auto',
-      }}>
-        {sections.map((section) => {
-          const sectionId = section.title.toLowerCase().replace(/\s+/g, '-');
-          // If highlightedId is set (user clicked), use that; otherwise use scroll-based activeSection
-          const isSectionActive = highlightedId
-            ? (highlightedId === sectionId && !activeItemId)
-            : (activeSection === section.title && !activeItemId);
-          return (
-            <div key={section.title} style={{ display: 'flex', flexDirection: 'column' }}>
-              <a
-                href={`#${sectionId}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigateTo(sectionId, true);
-                }}
-                style={{
-                  color: isSectionActive ? '#ffffff' : '#666',
-                  fontSize: '0.9rem',
-                  fontFamily: 'CustomRegularBold, sans-serif',
-                  textDecoration: 'none',
-                  padding: '0.3rem 0.75rem',
-                  borderRadius: '0.25rem',
-                  backgroundColor: isSectionActive ? '#1a1a1a' : 'transparent',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSectionActive) e.currentTarget.style.color = '#aaa';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSectionActive) e.currentTarget.style.color = '#666';
-                }}
-              >
-                {section.title}
-              </a>
-              <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.15rem' }}>
-                {section.items.map((item) => {
-                  const itemId = `${sectionId}-${item.title.toLowerCase().replace(/\s+/g, '-')}`;
-                  const isItemActive = activeItemId === itemId;
-                  return (
-                    <a
-                      key={item.title}
-                      href={`#${itemId}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigateTo(itemId);
-                      }}
-                      style={{
-                        color: isItemActive ? '#ffffff' : '#555',
-                        fontSize: '0.8rem',
-                        textDecoration: 'none',
-                        padding: '0.2rem 0.75rem 0.2rem 1.5rem',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: '160px',
-                        backgroundColor: isItemActive ? '#1a1a1a' : 'transparent',
-                        borderRadius: '0.25rem',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isItemActive) e.currentTarget.style.color = '#aaa';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isItemActive) e.currentTarget.style.color = '#555';
-                      }}
-                    >
-                      {item.title}
-                    </a>
-                  );
-                })}
+      {/* Sidebar nav - hidden on mobile */}
+      {!isMobile && (
+        <nav style={{
+          position: 'fixed',
+          top: '6rem',
+          left: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+          borderRight: '1px solid #222',
+          paddingRight: '1.5rem',
+          zIndex: 10,
+          maxHeight: 'calc(100vh - 8rem)',
+          overflowY: 'auto',
+        }}>
+          {sections.map((section) => {
+            const sectionId = section.title.toLowerCase().replace(/\s+/g, '-');
+            const isSectionActive = highlightedId
+              ? (highlightedId === sectionId && !activeItemId)
+              : (activeSection === section.title && !activeItemId);
+            return (
+              <div key={section.title} style={{ display: 'flex', flexDirection: 'column' }}>
+                <a
+                  href={`#${sectionId}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateTo(sectionId, true);
+                  }}
+                  style={{
+                    color: isSectionActive ? '#ffffff' : '#666',
+                    fontSize: '0.9rem',
+                    fontFamily: 'CustomRegularBold, sans-serif',
+                    textDecoration: 'none',
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '0.25rem',
+                    backgroundColor: isSectionActive ? '#1a1a1a' : 'transparent',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSectionActive) e.currentTarget.style.color = '#aaa';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSectionActive) e.currentTarget.style.color = '#666';
+                  }}
+                >
+                  {section.title}
+                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.15rem' }}>
+                  {section.items.map((item) => {
+                    const itemId = `${sectionId}-${item.title.toLowerCase().replace(/\s+/g, '-')}`;
+                    const isItemActive = activeItemId === itemId;
+                    return (
+                      <a
+                        key={item.title}
+                        href={`#${itemId}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateTo(itemId);
+                        }}
+                        style={{
+                          color: isItemActive ? '#ffffff' : '#555',
+                          fontSize: '0.8rem',
+                          textDecoration: 'none',
+                          padding: '0.2rem 0.75rem 0.2rem 1.5rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '160px',
+                          backgroundColor: isItemActive ? '#1a1a1a' : 'transparent',
+                          borderRadius: '0.25rem',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isItemActive) e.currentTarget.style.color = '#aaa';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isItemActive) e.currentTarget.style.color = '#555';
+                        }}
+                      >
+                        {item.title}
+                      </a>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </nav>
+            );
+          })}
+        </nav>
+      )}
 
-      <div style={{ flex: 1, minWidth: 0, marginLeft: '180px' }}>
+      <div style={{ flex: 1, minWidth: 0, marginLeft: isMobile ? '0' : '180px' }}>
         <h1 style={{
           fontFamily: 'CustomTitle, sans-serif',
-          fontSize: '2.5rem',
+          fontSize: isMobile ? '2rem' : '2.5rem',
           color: '#ffffff',
           margin: '0 0 0.5rem 0',
         }}>
@@ -475,7 +476,7 @@ export default function Academic() {
         </h1>
         <p style={{
           color: '#888',
-          fontSize: '1.05rem',
+          fontSize: isMobile ? '0.95rem' : '1.05rem',
           margin: '0 0 3rem 0',
         }}>
           A collection of publications, research papers, essays, and opinions.
@@ -505,11 +506,15 @@ export default function Academic() {
               }}>
                 {section.description}
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '0.75rem',
+              }}>
                 {section.items.map((item, itemIndex) => {
                   const sectionId = section.title.toLowerCase().replace(/\s+/g, '-');
                   const itemId = `${sectionId}-${item.title.toLowerCase().replace(/\s+/g, '-')}`;
-                  const rowIndex = Math.floor(itemIndex / 2);
+                  const rowIndex = isMobile ? itemIndex : Math.floor(itemIndex / 2);
                   const rowKey = `${sectionId}-row-${rowIndex}`;
                   const isExpanded = expandedRows.has(rowKey);
 
@@ -533,6 +538,7 @@ export default function Academic() {
                       highlighted={highlightedId === itemId}
                       expanded={isExpanded}
                       onToggle={toggleRow}
+                      isMobile={isMobile}
                     />
                   );
                 })}

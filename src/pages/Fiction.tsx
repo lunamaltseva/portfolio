@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function Fiction() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const isMobile = useIsMobile();
 
   const fullSummary = "A bereft young woman agrees to venture into an emerging civil war for the promise of a resurrection device.";
 
@@ -12,7 +14,7 @@ export default function Fiction() {
       minHeight: 'calc(100vh - 150px)',
       display: 'flex',
       alignItems: 'flex-end',
-      padding: '3rem',
+      padding: isMobile ? '1.5rem' : '3rem',
       overflow: 'hidden'
     }}>
       <div style={{
@@ -25,10 +27,10 @@ export default function Fiction() {
         zIndex: 1,
         pointerEvents: 'none'
       }} />
-      <div style={{ maxWidth: '600px', position: 'relative', zIndex: 2 }}>
+      <div style={{ maxWidth: isMobile ? '100%' : '600px', position: 'relative', zIndex: 2 }}>
         <h1 style={{
           fontFamily: 'Thezeraine, serif',
-          fontSize: '4rem',
+          fontSize: isMobile ? '2.5rem' : '4rem',
           color: '#ffffff',
           marginBottom: '1.5rem',
           lineHeight: '1.2'
@@ -38,16 +40,17 @@ export default function Fiction() {
 
         <div style={{
           display: 'flex',
-          gap: '1.5rem',
+          gap: isMobile ? '1rem' : '1.5rem',
           marginBottom: '1.5rem',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap',
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
             color: '#d3d3d3',
-            fontSize: '1rem'
+            fontSize: isMobile ? '0.9rem' : '1rem'
           }}>
             <svg
               width="20"
@@ -72,7 +75,7 @@ export default function Fiction() {
             alignItems: 'center',
             gap: '0.5rem',
             color: '#d3d3d3',
-            fontSize: '1rem'
+            fontSize: isMobile ? '0.9rem' : '1rem'
           }}>
             <svg
               width="20"

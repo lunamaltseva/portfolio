@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import * as pdfjsLib from 'pdfjs-dist';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -14,7 +15,7 @@ interface DesignItem {
   type: 'image' | 'pdf' | 'mp4';
   url: string;
   thumbnailUrl?: string;
-  aspect?: number; // width / height, e.g. 0.73 for portrait, 1.5 for landscape
+  aspect?: number;
 }
 
 interface DesignSection {
@@ -25,6 +26,7 @@ interface DesignSection {
 }
 
 const STRIP_HEIGHT = 200;
+const STRIP_HEIGHT_MOBILE = 150;
 
 const sections: DesignSection[] = [
   {
@@ -195,17 +197,17 @@ const sections: DesignSection[] = [
   }
 ];
 
-// Image area height = STRIP_HEIGHT - title bar (~40px)
-const IMG_HEIGHT = STRIP_HEIGHT - 40;
-
-function getItemWidth(item: DesignItem): number {
+function getItemWidth(item: DesignItem, isMobile: boolean): number {
+  const stripH = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT;
+  const imgH = stripH - 40;
   const aspect = item.aspect || 1;
-  const w = IMG_HEIGHT * aspect;
-  return Math.max(100, Math.min(360, Math.round(w)));
+  const w = imgH * aspect;
+  return Math.max(80, Math.min(isMobile ? 240 : 360, Math.round(w)));
 }
 
-function PdfThumbnail({ url, width }: { url: string; width: number }) {
+function PdfThumbnail({ url, width, isMobile }: { url: string; width: number; isMobile: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgH = (isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT) - 40;
 
   useEffect(() => {
     let cancelled = false;
@@ -239,7 +241,7 @@ function PdfThumbnail({ url, width }: { url: string; width: number }) {
       ref={canvasRef}
       style={{
         width: `${width}px`,
-        height: `${IMG_HEIGHT}px`,
+        height: `${imgH}px`,
         objectFit: 'cover',
         backgroundColor: '#1e1e1e',
         display: 'block',
@@ -299,15 +301,17 @@ function PdfModalViewer({ url }: { url: string }) {
   );
 }
 
-function StripItem({ item, onClick, highlighted }: { item: DesignItem; onClick: () => void; highlighted?: boolean }) {
-  const itemWidth = getItemWidth(item);
+function StripItem({ item, onClick, highlighted, isMobile }: { item: DesignItem; onClick: () => void; highlighted?: boolean; isMobile: boolean }) {
+  const itemWidth = getItemWidth(item, isMobile);
+  const imgH = (isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT) - 40;
+  const stripH = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT;
 
   return (
     <div
       onClick={onClick}
       style={{
         width: `${itemWidth}px`,
-        height: `${STRIP_HEIGHT}px`,
+        height: `${stripH}px`,
         flexShrink: 0,
         borderRadius: '0.5rem',
         overflow: 'hidden',
@@ -325,7 +329,7 @@ function StripItem({ item, onClick, highlighted }: { item: DesignItem; onClick: 
           src={item.thumbnailUrl || item.url}
           alt={item.title}
           draggable={false}
-          style={{ width: `${itemWidth}px`, height: `${IMG_HEIGHT}px`, objectFit: 'cover', display: 'block' }}
+          style={{ width: `${itemWidth}px`, height: `${imgH}px`, objectFit: 'cover', display: 'block' }}
         />
       ) : item.type === 'mp4' ? (
         <video
@@ -335,15 +339,15 @@ function StripItem({ item, onClick, highlighted }: { item: DesignItem; onClick: 
           autoPlay
           playsInline
           draggable={false}
-          style={{ width: `${itemWidth}px`, height: `${IMG_HEIGHT}px`, objectFit: 'cover', display: 'block' }}
+          style={{ width: `${itemWidth}px`, height: `${imgH}px`, objectFit: 'cover', display: 'block' }}
         />
       ) : (
-        <PdfThumbnail url={item.thumbnailUrl || item.url} width={itemWidth} />
+        <PdfThumbnail url={item.thumbnailUrl || item.url} width={itemWidth} isMobile={isMobile} />
       )}
       <div style={{
         padding: '0.35rem 0.6rem',
         color: highlighted ? '#fff' : '#aaa',
-        fontSize: '0.8rem',
+        fontSize: isMobile ? '0.7rem' : '0.8rem',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -354,11 +358,12 @@ function StripItem({ item, onClick, highlighted }: { item: DesignItem; onClick: 
   );
 }
 
-function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone }: {
+function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone, isMobile }: {
   items: DesignItem[];
   onItemClick: (item: DesignItem) => void;
   highlightedItem?: DesignItem | null;
   onHighlightDone?: () => void;
+  isMobile: boolean;
 }) {
   const innerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -374,28 +379,23 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
   const FRICTION = 0.95;
   const MIN_VELOCITY = 0.1;
 
-  // Compute how many copies of items we need to fill the viewport + extra for seamless wrap.
-  // We need at least 2 full sets, but if items are few/narrow we need more.
   const [repeatCount, setRepeatCount] = useState(3);
   const oneSetWidthRef = useRef(0);
 
   useEffect(() => {
     if (!viewportRef.current) return;
-    // Estimate one-set width from items
     const GAP = 16;
     let setW = 0;
     for (const item of items) {
-      setW += getItemWidth(item) + GAP;
+      setW += getItemWidth(item, isMobile) + GAP;
     }
     oneSetWidthRef.current = setW;
 
-    // Need enough copies so total > 2 * viewport width (one offscreen left, one right)
     const vpWidth = viewportRef.current.offsetWidth;
     const needed = Math.max(3, Math.ceil((vpWidth * 3) / Math.max(setW, 1)));
     setRepeatCount(needed);
-  }, [items]);
+  }, [items, isMobile]);
 
-  // Re-measure actual one-set width after render (accounts for actual DOM widths)
   useEffect(() => {
     if (!innerRef.current) return;
     const count = items.length;
@@ -406,7 +406,7 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
       w += (children[i] as HTMLElement).offsetWidth + 16;
     }
     oneSetWidthRef.current = w;
-  }, [items, repeatCount]);
+  }, [items, repeatCount, isMobile]);
 
   function wrapPos() {
     const setW = oneSetWidthRef.current;
@@ -415,14 +415,12 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
     while (posRef.current < -setW) posRef.current += setW;
   }
 
-  // Handle nav-triggered highlight: scroll item to center and freeze
   useEffect(() => {
     if (!highlightedItem || !innerRef.current || !viewportRef.current) return;
 
     isFrozenRef.current = true;
     isPausedRef.current = true;
 
-    // Find the first occurrence of this item in the duplicated list
     const idx = items.findIndex(it => it.title === highlightedItem.title);
     if (idx < 0) return;
 
@@ -438,7 +436,6 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
     wrapPos();
     innerRef.current.style.transform = `translateX(${posRef.current}px)`;
 
-    // Unfreeze after a delay
     const timer = setTimeout(() => {
       isFrozenRef.current = false;
       onHighlightDone?.();
@@ -446,15 +443,13 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
     return () => clearTimeout(timer);
   }, [highlightedItem, items, onHighlightDone]);
 
-  // Animation loop with inertia
   useEffect(() => {
     let animId: number;
     function tick() {
       if (innerRef.current && !isFrozenRef.current) {
         if (isDraggingRef.current) {
-          // During drag, position is set by mouse handlers directly
+          // During drag, position is set by handlers directly
         } else if (Math.abs(velocityRef.current) > MIN_VELOCITY) {
-          // Inertia phase
           posRef.current += velocityRef.current;
           velocityRef.current *= FRICTION;
           if (Math.abs(velocityRef.current) <= MIN_VELOCITY) {
@@ -463,7 +458,6 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
           wrapPos();
           innerRef.current.style.transform = `translateX(${posRef.current}px)`;
         } else if (!isPausedRef.current) {
-          // Auto-scroll
           posRef.current -= SPEED;
           wrapPos();
           innerRef.current.style.transform = `translateX(${posRef.current}px)`;
@@ -475,7 +469,6 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Pause when tab is hidden
   useEffect(() => {
     function handleVisibility() {
       if (document.hidden) isPausedRef.current = true;
@@ -553,33 +546,35 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
 
   return (
     <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => scrollByAmount(200)}
-        style={{
-          position: 'absolute',
-          left: '-12px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 2,
-          background: 'rgba(0,0,0,0.8)',
-          border: '1px solid #333',
-          color: '#fff',
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.9rem',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
+      {!isMobile && (
+        <button
+          onClick={() => scrollByAmount(200)}
+          style={{
+            position: 'absolute',
+            left: '-12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 2,
+            background: 'rgba(0,0,0,0.8)',
+            border: '1px solid #333',
+            color: '#fff',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.9rem',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      )}
 
       <div
         ref={viewportRef}
@@ -612,43 +607,46 @@ function HorizontalStrip({ items, onItemClick, highlightedItem, onHighlightDone 
               item={item}
               onClick={() => handleItemClick(item)}
               highlighted={highlightedItem?.title === item.title}
+              isMobile={isMobile}
             />
           ))}
         </div>
       </div>
 
-      <button
-        onClick={() => scrollByAmount(-200)}
-        style={{
-          position: 'absolute',
-          right: '-12px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 2,
-          background: 'rgba(0,0,0,0.8)',
-          border: '1px solid #333',
-          color: '#fff',
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.9rem',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </button>
+      {!isMobile && (
+        <button
+          onClick={() => scrollByAmount(-200)}
+          style={{
+            position: 'absolute',
+            right: '-12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 2,
+            background: 'rgba(0,0,0,0.8)',
+            border: '1px solid #333',
+            color: '#fff',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.9rem',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
 
-function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void }) {
+function ItemModal({ item, onClose, isMobile }: { item: DesignItem; onClose: () => void; isMobile: boolean }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -676,16 +674,16 @@ function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void })
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem',
+        padding: isMobile ? '1rem' : '2rem',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#141414',
-          borderRadius: '1rem',
+          borderRadius: isMobile ? '0.75rem' : '1rem',
           border: '1px solid #222',
-          maxWidth: '900px',
+          maxWidth: isMobile ? '100%' : '900px',
           maxHeight: '90vh',
           width: '100%',
           overflow: 'auto',
@@ -696,8 +694,8 @@ function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void })
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '1rem',
-            right: '1rem',
+            top: '0.75rem',
+            right: '0.75rem',
             background: 'none',
             border: 'none',
             color: '#888',
@@ -712,7 +710,7 @@ function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void })
           {'\u00D7'}
         </button>
 
-        <div style={{ padding: '2rem' }}>
+        <div style={{ padding: isMobile ? '1rem' : '2rem' }}>
           {item.type === 'image' ? (
             <img
               src={item.url}
@@ -745,7 +743,7 @@ function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void })
 
           <h2 style={{
             fontFamily: 'CustomRegularBold, sans-serif',
-            fontSize: '1.3rem',
+            fontSize: isMobile ? '1.1rem' : '1.3rem',
             color: '#ffffff',
             margin: '1.5rem 0 0.5rem 0',
           }}>
@@ -769,177 +767,121 @@ function ItemModal({ item, onClose }: { item: DesignItem; onClose: () => void })
   );
 }
 
-function CollapsibleNav({ sections: navSections, activeSection, activeItemTitle, onNavigate, onItemNavigate }: {
+function FixedNav({ sections: navSections, activeSection, activeItemTitle, onNavigate, onItemNavigate }: {
   sections: DesignSection[];
   activeSection: string;
   activeItemTitle: string | null;
   onNavigate: (sectionId: string) => void;
   onItemNavigate: (sectionId: string, item: DesignItem) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
-    <>
-      {/* Backdrop: closes nav when clicking outside */}
-      {isOpen && (
-        <div
-          onClick={() => setIsOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 19,
-          }}
-        />
-      )}
-
-      {/* Toggle button — always visible, fixed position */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'fixed',
-          top: '4.5rem',
-          left: '0.5rem',
-          zIndex: 21,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '32px',
-          height: '32px',
-          background: 'none',
-          border: 'none',
-          color: '#666',
-          cursor: 'pointer',
-          transition: 'color 0.2s ease',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
-      >
-        {isOpen ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        )}
-      </button>
-
-      {/* Nav pane — matches Academic.tsx style with black background */}
-      <nav style={{
-        position: 'fixed',
-        top: '0',
-        left: '2rem',
-        bottom: '0',
-        width: isOpen ? '180px' : '0px',
-        transition: 'width 0.3s ease',
-        zIndex: 20,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        backgroundColor: '#000000',
-        borderRight: isOpen ? '1px solid #222' : 'none',
-        paddingRight: isOpen ? '1.5rem' : '0',
-        paddingTop: '6rem',
-      }}>
-        <div style={{
-          opacity: isOpen ? 1 : 0,
-          pointerEvents: isOpen ? 'auto' : 'none',
-          transition: 'opacity 0.2s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem',
-        }}>
-          {navSections.map((section) => {
-            const sectionId = section.title.toLowerCase().replace(/\s+/g, '-');
-            const isActive = activeSection === section.title;
-            return (
-              <div key={section.title} style={{ display: 'flex', flexDirection: 'column' }}>
-                <a
-                  href={`#${sectionId}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigate(sectionId);
-                  }}
-                  style={{
-                    color: isActive ? '#ffffff' : '#666',
-                    fontSize: '0.9rem',
-                    fontFamily: 'CustomRegularBold, sans-serif',
-                    textDecoration: 'none',
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: '0.25rem',
-                    backgroundColor: isActive ? '#1a1a1a' : 'transparent',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#aaa'; }}
-                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#666'; }}
-                >
-                  {section.title}
-                </a>
-                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.15rem' }}>
-                  {section.items.map((item) => {
-                    const isItemActive = activeItemTitle === item.title;
-                    return (
-                      <a
-                        key={item.title}
-                        href={`#${sectionId}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onItemNavigate(sectionId, item);
-                        }}
-                        style={{
-                          color: isItemActive ? '#ffffff' : '#555',
-                          fontSize: '0.8rem',
-                          textDecoration: 'none',
-                          padding: '0.2rem 0.75rem 0.2rem 1.5rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '160px',
-                          backgroundColor: isItemActive ? '#1a1a1a' : 'transparent',
-                          borderRadius: '0.25rem',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => { if (!isItemActive) e.currentTarget.style.color = '#aaa'; }}
-                        onMouseLeave={(e) => { if (!isItemActive) e.currentTarget.style.color = isItemActive ? '#ffffff' : '#555'; }}
-                      >
-                        {item.title}
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </nav>
-    </>
+    <nav style={{
+      position: 'fixed',
+      top: '6rem',
+      left: '2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
+      borderRight: '1px solid #222',
+      paddingRight: '1.5rem',
+      zIndex: 10,
+      maxHeight: 'calc(100vh - 8rem)',
+      overflowY: 'auto',
+    }}>
+      {navSections.map((section) => {
+        const sectionId = section.title.toLowerCase().replace(/\s+/g, '-');
+        const isSectionActive = activeSection === section.title && !activeItemTitle;
+        return (
+          <div key={section.title} style={{ display: 'flex', flexDirection: 'column' }}>
+            <a
+              href={`#${sectionId}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate(sectionId);
+              }}
+              style={{
+                color: isSectionActive ? '#ffffff' : '#666',
+                fontSize: '0.9rem',
+                fontFamily: 'CustomRegularBold, sans-serif',
+                textDecoration: 'none',
+                padding: '0.3rem 0.75rem',
+                borderRadius: '0.25rem',
+                backgroundColor: isSectionActive ? '#1a1a1a' : 'transparent',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSectionActive) e.currentTarget.style.color = '#aaa';
+              }}
+              onMouseLeave={(e) => {
+                if (!isSectionActive) e.currentTarget.style.color = '#666';
+              }}
+            >
+              {section.title}
+            </a>
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.15rem' }}>
+              {section.items.map((item) => {
+                const isItemActive = activeItemTitle === item.title;
+                return (
+                  <a
+                    key={item.title}
+                    href={`#${sectionId}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onItemNavigate(sectionId, item);
+                    }}
+                    style={{
+                      color: isItemActive ? '#ffffff' : '#555',
+                      fontSize: '0.8rem',
+                      textDecoration: 'none',
+                      padding: '0.2rem 0.75rem 0.2rem 1.5rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '160px',
+                      backgroundColor: isItemActive ? '#1a1a1a' : 'transparent',
+                      borderRadius: '0.25rem',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isItemActive) e.currentTarget.style.color = '#aaa';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isItemActive) e.currentTarget.style.color = '#555';
+                    }}
+                  >
+                    {item.title}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </nav>
   );
 }
 
-function SectionCard({ section, id, onItemClick, highlightedItem, onHighlightDone }: {
+function SectionCard({ section, id, onItemClick, highlightedItem, onHighlightDone, isMobile }: {
   section: DesignSection;
   id: string;
   onItemClick: (item: DesignItem) => void;
   highlightedItem?: DesignItem | null;
   onHighlightDone?: () => void;
+  isMobile: boolean;
 }) {
   return (
-    <div id={id} style={{ marginBottom: '3rem' }}>
+    <div id={id} style={{ marginBottom: isMobile ? '2rem' : '3rem' }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'baseline',
         marginBottom: '0.25rem',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
       }}>
         <h2 style={{
           fontFamily: 'CustomRegularBold, sans-serif',
-          fontSize: '1.3rem',
+          fontSize: isMobile ? '1.1rem' : '1.3rem',
           color: '#ffffff',
           margin: 0,
         }}>
@@ -950,7 +892,6 @@ function SectionCard({ section, id, onItemClick, highlightedItem, onHighlightDon
           fontSize: '0.85rem',
           fontFamily: 'CustomRegular, sans-serif',
           flexShrink: 0,
-          marginLeft: '1rem',
         }}>
           {section.date}
         </span>
@@ -967,17 +908,17 @@ function SectionCard({ section, id, onItemClick, highlightedItem, onHighlightDon
         onItemClick={onItemClick}
         highlightedItem={highlightedItem}
         onHighlightDone={onHighlightDone}
+        isMobile={isMobile}
       />
     </div>
   );
 }
 
 export default function Design() {
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState(sections[0].title);
   const [selectedItem, setSelectedItem] = useState<DesignItem | null>(null);
-  // Per-section highlighted item for nav-triggered scroll-to-center + visual highlight
   const [highlightedItems, setHighlightedItems] = useState<Record<string, DesignItem | null>>({});
-  // Track the active item title in the nav (for nav highlight + strip highlight)
   const [activeItemTitle, setActiveItemTitle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1010,7 +951,6 @@ export default function Design() {
   }
 
   const handleItemNavigate = useCallback((sectionId: string, item: DesignItem) => {
-    // Scroll section into view, then highlight item in strip
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
     setHighlightedItems(prev => ({ ...prev, [sectionId]: item }));
     setActiveItemTitle(item.title);
@@ -1025,22 +965,25 @@ export default function Design() {
     <div style={{
       backgroundColor: '#000000',
       minHeight: '100vh',
-      padding: '3rem 3rem 3rem 5rem',
+      padding: isMobile ? '1.5rem' : '3rem 3rem 3rem 5rem',
       display: 'flex',
-      gap: '3rem',
+      gap: isMobile ? '0' : '3rem',
+      flexDirection: isMobile ? 'column' : 'row',
     }}>
-      <CollapsibleNav
-        sections={sections}
-        activeSection={activeSection}
-        activeItemTitle={activeItemTitle}
-        onNavigate={navigateTo}
-        onItemNavigate={handleItemNavigate}
-      />
+      {!isMobile && (
+        <FixedNav
+          sections={sections}
+          activeSection={activeSection}
+          activeItemTitle={activeItemTitle}
+          onNavigate={navigateTo}
+          onItemNavigate={handleItemNavigate}
+        />
+      )}
 
-      <div style={{ flex: 1, minWidth: 0, marginLeft: '48px' }}>
+      <div style={{ flex: 1, minWidth: 0, marginLeft: isMobile ? '0' : '180px' }}>
         <h1 style={{
           fontFamily: 'CustomTitle, sans-serif',
-          fontSize: '2.5rem',
+          fontSize: isMobile ? '2rem' : '2.5rem',
           color: '#ffffff',
           margin: '0 0 0.5rem 0',
         }}>
@@ -1048,7 +991,7 @@ export default function Design() {
         </h1>
         <p style={{
           color: '#888',
-          fontSize: '1.05rem',
+          fontSize: isMobile ? '0.95rem' : '1.05rem',
           margin: '0 0 3rem 0',
         }}>
           A sample of commissioned and personal design work.
@@ -1064,13 +1007,14 @@ export default function Design() {
               onItemClick={(item) => setSelectedItem(item)}
               highlightedItem={highlightedItems[sectionId]}
               onHighlightDone={() => handleHighlightDone(sectionId)}
+              isMobile={isMobile}
             />
           );
         })}
       </div>
 
       {selectedItem && (
-        <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} isMobile={isMobile} />
       )}
     </div>
   );

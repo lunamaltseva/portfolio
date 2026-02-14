@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface Project {
   id: string;
@@ -81,10 +82,12 @@ function ProjectNavbar({
   projects: navProjects,
   activeIndex,
   onSelect,
+  isMobile,
 }: {
   projects: Project[];
   activeIndex: number;
   onSelect: (index: number) => void;
+  isMobile: boolean;
 }) {
   const navRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -105,7 +108,7 @@ function ProjectNavbar({
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 100,
-      width: 'calc(100% - 4rem)',
+      width: isMobile ? 'calc(100% - 1.5rem)' : 'calc(100% - 4rem)',
       maxWidth: '1200px',
     }}>
       <div
@@ -124,7 +127,7 @@ function ProjectNavbar({
           scrollbarWidth: 'none',
         }}
       >
-        {/* Left arrow — wraps around */}
+        {/* Left arrow */}
         <button
           onClick={() => onSelect((activeIndex - 1 + navProjects.length) % navProjects.length)}
           style={{
@@ -148,12 +151,14 @@ function ProjectNavbar({
           </svg>
         </button>
 
-        {/* Project titles — centered with flex: 1 spacer */}
+        {/* Project titles */}
         <div style={{
           flex: 1,
           display: 'flex',
-          justifyContent: 'center',
+          justifyContent: isMobile ? 'flex-start' : 'center',
           gap: '0.25rem',
+          overflowX: isMobile ? 'auto' : 'visible',
+          scrollbarWidth: 'none',
         }}>
           {navProjects.map((project, index) => (
             <button
@@ -162,13 +167,13 @@ function ProjectNavbar({
               onClick={() => onSelect(index)}
               style={{
                 flexShrink: 0,
-                padding: '0.5rem 1rem',
+                padding: isMobile ? '0.5rem 0.75rem' : '0.5rem 1rem',
                 borderRadius: '0.5rem',
                 border: 'none',
                 backgroundColor: index === activeIndex ? '#333' : 'transparent',
                 color: index === activeIndex ? '#fff' : '#888',
                 fontFamily: 'CustomRegular, sans-serif',
-                fontSize: '0.85rem',
+                fontSize: isMobile ? '0.75rem' : '0.85rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
@@ -191,7 +196,7 @@ function ProjectNavbar({
           ))}
         </div>
 
-        {/* Right arrow — wraps around */}
+        {/* Right arrow */}
         <button
           onClick={() => onSelect((activeIndex + 1) % navProjects.length)}
           style={{
@@ -219,7 +224,7 @@ function ProjectNavbar({
   );
 }
 
-function ProjectPage({ project }: { project: Project }) {
+function ProjectPage({ project, isMobile }: { project: Project; isMobile: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -235,7 +240,7 @@ function ProjectPage({ project }: { project: Project }) {
       minHeight: 'calc(100vh - 150px)',
       display: 'flex',
       alignItems: 'flex-end',
-      padding: '3rem',
+      padding: isMobile ? '1.5rem' : '3rem',
       overflow: 'hidden',
     }}>
       {/* Background image */}
@@ -249,8 +254,8 @@ function ProjectPage({ project }: { project: Project }) {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '75%',
-            height: '75%',
+            width: isMobile ? '95%' : '75%',
+            height: isMobile ? '60%' : '75%',
             objectFit: 'contain',
             zIndex: 0,
             opacity: imageLoaded ? 1 : 0,
@@ -272,15 +277,15 @@ function ProjectPage({ project }: { project: Project }) {
       }} />
 
       {/* Content */}
-      <div style={{ maxWidth: '600px', position: 'relative', zIndex: 2 }}>
+      <div style={{ maxWidth: isMobile ? '100%' : '600px', position: 'relative', zIndex: 2 }}>
         {/* Title */}
         {project.titleType === 'image' && project.titleImageUrl ? (
           <img
             src={project.titleImageUrl}
             alt={project.title}
             style={{
-              maxHeight: '120px',
-              maxWidth: '400px',
+              maxHeight: isMobile ? '80px' : '120px',
+              maxWidth: isMobile ? '250px' : '400px',
               marginBottom: '1.5rem',
               objectFit: 'contain',
               filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))',
@@ -289,7 +294,7 @@ function ProjectPage({ project }: { project: Project }) {
         ) : (
           <h1 style={{
             fontFamily: project.titleFont || 'CustomTitle, sans-serif',
-            fontSize: project.titleSize || '3.5rem',
+            fontSize: isMobile ? '2rem' : (project.titleSize || '3.5rem'),
             color: '#ffffff',
             marginBottom: '1.5rem',
             lineHeight: '1.2',
@@ -301,16 +306,17 @@ function ProjectPage({ project }: { project: Project }) {
         {/* Meta info */}
         <div style={{
           display: 'flex',
-          gap: '1.5rem',
+          gap: isMobile ? '1rem' : '1.5rem',
           marginBottom: '1.5rem',
           alignItems: 'center',
+          flexWrap: 'wrap',
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
             color: '#d3d3d3',
-            fontSize: '1rem',
+            fontSize: isMobile ? '0.9rem' : '1rem',
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d3d3d3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -326,7 +332,7 @@ function ProjectPage({ project }: { project: Project }) {
             alignItems: 'center',
             gap: '0.5rem',
             color: '#d3d3d3',
-            fontSize: '1rem',
+            fontSize: isMobile ? '0.9rem' : '1rem',
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d3d3d3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="16 18 22 12 16 6" />
@@ -389,6 +395,7 @@ function ProjectPage({ project }: { project: Project }) {
 
 export default function Programming() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const isMobile = useIsMobile();
 
   return (
     <div style={{ position: 'relative' }}>
@@ -396,8 +403,9 @@ export default function Programming() {
         projects={projects}
         activeIndex={activeIndex}
         onSelect={setActiveIndex}
+        isMobile={isMobile}
       />
-      <ProjectPage project={projects[activeIndex]} />
+      <ProjectPage project={projects[activeIndex]} isMobile={isMobile} />
     </div>
   );
 }

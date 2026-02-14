@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface NavLink {
   label: string;
@@ -24,8 +25,33 @@ const navItems: NavItem[] = [
   { label: 'Programming', href: '/programming' },
 ];
 
-function Dropdown({ label, items }: { label: string; items: NavLink[] }) {
+function Dropdown({ label, items, isMobile, onNavigate }: { label: string; items: NavLink[]; isMobile: boolean; onNavigate: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  if (isMobile) {
+    return (
+      <li>
+        <span
+          className="nav-link"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{ cursor: 'pointer' }}
+        >
+          {label}
+        </span>
+        {isOpen && (
+          <ul className="dropdown-menu" style={{ opacity: 1, visibility: 'visible', transform: 'none' }}>
+            {items.map((item) => (
+              <li key={item.href}>
+                <a href={item.href} className="dropdown-item" onClick={onNavigate}>
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  }
 
   return (
     <li
@@ -50,19 +76,70 @@ function Dropdown({ label, items }: { label: string; items: NavLink[] }) {
 }
 
 export default function Navbar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const navRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!isMobile) setMenuOpen(false);
+  }, [isMobile]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node) &&
+          !(e.target as HTMLElement).closest('.hamburger-btn')) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [menuOpen]);
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
         <a href="/" className="navbar-title">
           Luna Maltseva
         </a>
-        <ul className="navbar-nav">
+        <button
+          className="hamburger-btn"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {menuOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
+        <ul ref={navRef} className={`navbar-nav${menuOpen ? ' open' : ''}`}>
           {navItems.map((item) =>
             item.dropdown ? (
-              <Dropdown key={item.label} label={item.label} items={item.dropdown} />
+              <Dropdown
+                key={item.label}
+                label={item.label}
+                items={item.dropdown}
+                isMobile={isMobile}
+                onNavigate={() => setMenuOpen(false)}
+              />
             ) : (
               <li key={item.href} className="nav-item">
-                <a href={item.href} className="nav-link">
+                <a
+                  href={item.href}
+                  className="nav-link"
+                  onClick={() => setMenuOpen(false)}
+                >
                   {item.label}
                 </a>
               </li>

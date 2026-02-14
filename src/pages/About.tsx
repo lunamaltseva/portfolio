@@ -1,6 +1,7 @@
-
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function About() {
+  const isMobile = useIsMobile();
   const programmingSkills = ['C', 'C++', 'raylib', 'Qt', 'Python', 'Scikit-Learn', 'Linux', 'Cisco IOS'];
   const designSkills = ['Blender', 'aseprite', 'Photoshop', 'Illustrator', 'InDesign', 'VEGAS Pro'];
   const writingSkills = ['Research'];
@@ -26,14 +27,14 @@ export default function About() {
     <div style={{
       backgroundColor: '#000000',
       minHeight: 'calc(100vh - 120px)',
-      padding: '3rem',
+      padding: isMobile ? '1.5rem' : '3rem',
       display: 'flex',
       justifyContent: 'center',
     }}>
-      <div style={{ maxWidth: '70%' }}>
+      <div style={{ maxWidth: isMobile ? '100%' : '70%' }}>
         <h1 style={{
           fontFamily: 'CustomTitle, sans-serif',
-          fontSize: '2.5rem',
+          fontSize: isMobile ? '2rem' : '2.5rem',
           fontWeight: 'bold',
           color: '#ffffff',
           marginBottom: '2rem',
