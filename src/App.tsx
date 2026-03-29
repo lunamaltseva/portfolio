@@ -7,6 +7,7 @@ import Academic from './pages/Academic';
 import About from './pages/About';
 import Design from './pages/Design';
 import Programming from './pages/Programming';
+import Redirect from './pages/r';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/writing/academic" element={<Academic />} />
         <Route path="/design" element={<Design />} />
         <Route path="/programming" element={<Programming />} />
+        <Route path="/r" element={<Redirect />} />
       </Routes>
       <Footer />
     </div>
