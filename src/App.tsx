@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -8,6 +9,8 @@ import About from './pages/About';
 import Design from './pages/Design';
 import Programming from './pages/Programming';
 import Redirect from './pages/r';
+
+const Decay = lazy(() => import('./pages/Decay'));
 
 function App() {
   return (
@@ -26,6 +29,7 @@ function App() {
         <Route path="/design" element={<Design />} />
         <Route path="/programming" element={<Programming />} />
         <Route path="/r" element={<Redirect />} />
+        <Route path="/decay" element={<Suspense fallback={<div style={{ background: '#000', minHeight: '100vh' }} />}><Decay /></Suspense>} />
       </Routes>
       <Footer />
     </div>
