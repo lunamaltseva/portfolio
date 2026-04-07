@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useAtomState } from './decay/useAtomState';
 import NucleusView from './decay/NucleusView';
@@ -24,6 +24,23 @@ export default function Decay() {
     [state.temperature]
   );
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (state.microwaving) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/secret.mp3');
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play();
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    }
+  }, [state.microwaving]);
+
   return (
     <div
       style={{
@@ -41,6 +58,7 @@ export default function Decay() {
           animation={state.animation}
           isMobile={isMobile}
           temperature={state.temperature}
+          microwaving={state.microwaving}
         />
       </div>
 
@@ -63,6 +81,7 @@ export default function Decay() {
         onClear={clearAtom}
         isAnimating={state.animation !== null}
         isMobile={isMobile}
+        microwaving={state.microwaving}
       />
     </div>
   );

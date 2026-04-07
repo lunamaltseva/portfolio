@@ -10,7 +10,7 @@ import { Object3D, Vector3, Raycaster, Vector2, Color } from 'three';
 import type { Isotope } from './nuclearData';
 import type { AnimationState } from './useAtomState';
 import { generateNucleonPositions } from './nucleonLayout';
-import { temperatureToSliderPosition } from './nuclearData';
+import { temperatureToSliderPosition, getElectronShells } from './nuclearData';
 import ParticleAnimation from './ParticleAnimation';
 
 interface NucleusViewProps {
@@ -18,6 +18,7 @@ interface NucleusViewProps {
   animation: AnimationState | null;
   isMobile: boolean;
   temperature: number;
+  microwaving?: boolean;
 }
 
 const NUCLEON_RADIUS = 0.18;
@@ -121,6 +122,22 @@ function NucleusMesh({
     // Guard: if refs are out of sync with mesh counts, skip this frame
     if (types.length !== currentPos.current.length || types.length === 0) return;
 
+    // Compute jitter once — applied in all branches except snap-back
+    const sliderPos = temperatureToSliderPosition(temperature);
+    const jitterStrength = sliderPos * NUCLEON_RADIUS * 0.4;
+
+    const jitter = (base: Vector3, cur: Vector3) => {
+      if (jitterStrength > 0.0001) {
+        cur.set(
+          base.x + (Math.random() - 0.5) * 2 * jitterStrength,
+          base.y + (Math.random() - 0.5) * 2 * jitterStrength,
+          base.z + (Math.random() - 0.5) * 2 * jitterStrength
+        );
+      } else {
+        cur.copy(base);
+      }
+    };
+
     if (drag) {
       const dragDist = drag.dragOffset.length();
 
@@ -139,9 +156,10 @@ function NucleusMesh({
             const pull = drag.dragOffset
               .clone()
               .multiplyScalar(influence * 0.7);
-            currentPos.current[i].copy(rest).add(pull);
+            const base = rest.clone().add(pull);
+            jitter(base, currentPos.current[i]);
           } else {
-            currentPos.current[i].copy(rest);
+            jitter(rest, currentPos.current[i]);
           }
         }
       }
@@ -183,21 +201,12 @@ function NucleusMesh({
       }
     } else {
       // Temperature jitter — based on the log-scale slider position
-      // so it's visible as soon as the slider moves off zero
-      const sliderPos = temperatureToSliderPosition(temperature);
-      const jitterStrength = sliderPos * NUCLEON_RADIUS * 0.4;
-
       if (jitterStrength > 0.0001) {
         for (let i = 0; i < types.length; i++) {
           const rest = restPositions.current[i];
           const cur = currentPos.current[i];
           if (!rest || !cur) continue;
-
-          const jx = (Math.random() - 0.5) * 2 * jitterStrength;
-          const jy = (Math.random() - 0.5) * 2 * jitterStrength;
-          const jz = (Math.random() - 0.5) * 2 * jitterStrength;
-
-          cur.set(rest.x + jx, rest.y + jy, rest.z + jz);
+          jitter(rest, cur);
         }
         syncMeshes();
       }
@@ -387,14 +396,189 @@ function EmptyState() {
   return null;
 }
 
+const BG_NEUTRON_COUNT = 16;
+
+// Pre-compute random orbital parameters for each background neutron
+const bgNeutronParams = Array.from({ length: BG_NEUTRON_COUNT }, (_, i) => ({
+  // Orbital radii and speeds — varied so they don't clump
+  rx: 6 + (i % 4) * 3 + Math.sin(i * 2.1) * 2,
+  ry: 5 + ((i + 1) % 3) * 3 + Math.cos(i * 1.7) * 2,
+  rz: 5 + ((i + 2) % 5) * 2.5 + Math.sin(i * 0.9) * 2,
+  // Speed multipliers — fast whooshing
+  sx: 0.6 + (i * 0.17) % 0.8,
+  sy: 0.5 + (i * 0.23) % 0.7,
+  sz: 0.4 + (i * 0.13) % 0.9,
+  // Phase offsets to spread them out
+  px: (i * 1.37) % (Math.PI * 2),
+  py: (i * 2.03) % (Math.PI * 2),
+  pz: (i * 0.89) % (Math.PI * 2),
+}));
+
+function BackgroundNeutrons() {
+  const meshRef = useRef<InstancedMeshType>(null);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const t = clock.getElapsedTime();
+    const dummy = new Object3D();
+
+    for (let i = 0; i < BG_NEUTRON_COUNT; i++) {
+      const p = bgNeutronParams[i];
+      dummy.position.set(
+        Math.sin(t * p.sx + p.px) * p.rx,
+        Math.cos(t * p.sy + p.py) * p.ry,
+        Math.sin(t * p.sz + p.pz) * p.rz
+      );
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, BG_NEUTRON_COUNT]}>
+      <sphereGeometry args={[0.06, 6, 6]} />
+      <meshStandardMaterial
+        color="#7f8c8d"
+        emissive="#7f8c8d"
+        emissiveIntensity={0.3}
+        transparent
+        opacity={0.35}
+      />
+    </instancedMesh>
+  );
+}
+
+interface ElectronShellsProps {
+  protons: number;
+  nucleusRadius: number;
+  microwaving: boolean;
+}
+
+// Per-shell random tumble speeds (seeded by index, stable across renders)
+const SHELL_TUMBLE = Array.from({ length: 10 }, (_, i) => ({
+  pitchSpeed: 1.2 + (i * 0.73) % 1.5,
+  rollSpeed: 0.9 + (i * 1.17) % 1.8,
+  pitchPhase: (i * 2.31) % (Math.PI * 2),
+  rollPhase: (i * 1.67) % (Math.PI * 2),
+}));
+
+function ElectronShells({ protons, nucleusRadius, microwaving }: ElectronShellsProps) {
+  const shells = useMemo(() => getElectronShells(protons), [protons]);
+  const electronRefs = useRef<(InstancedMeshType | null)[]>([]);
+  const shellGroupRefs = useRef<(Group | null)[]>([]);
+  const colorRef = useRef(new Color('#2ecc71'));
+
+  // Minimum orbit radius: ensure inner shell clears the nucleus
+  const minOrbitRadius = nucleusRadius + 0.5;
+  const shellSpacing = 0.55;
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    const dummy = new Object3D();
+
+    if (microwaving) {
+      colorRef.current.setHSL((t * 3) % 1, 1, 0.5);
+    } else {
+      colorRef.current.set('#2ecc71');
+    }
+
+    shells.forEach((count, shellIdx) => {
+      const mesh = electronRefs.current[shellIdx];
+      const shellGroup = shellGroupRefs.current[shellIdx];
+
+      // Apply axial tumble to the shell group when microwaving
+      if (shellGroup) {
+        if (microwaving) {
+          const tumble = SHELL_TUMBLE[shellIdx % SHELL_TUMBLE.length];
+          shellGroup.rotation.x = Math.sin(t * tumble.pitchSpeed + tumble.pitchPhase) * Math.PI * 0.4;
+          shellGroup.rotation.z = Math.cos(t * tumble.rollSpeed + tumble.rollPhase) * Math.PI * 0.3;
+        } else {
+          // Smoothly return to flat
+          shellGroup.rotation.x *= 0.9;
+          shellGroup.rotation.z *= 0.9;
+        }
+      }
+
+      if (!mesh) return;
+
+      const radius = minOrbitRadius + shellIdx * shellSpacing;
+      // When microwaving: fast spin; otherwise: gentle orbit
+      const angularSpeed = microwaving ? (4 + shellIdx * 0.5) : (0.5 / (shellIdx + 1));
+
+      // Update color
+      const mat = mesh.material as import('three').MeshStandardMaterial;
+      if (mat) {
+        mat.color.copy(colorRef.current);
+        mat.emissive.copy(colorRef.current);
+      }
+
+      // All orbits in the horizontal (XZ) plane
+      for (let e = 0; e < count; e++) {
+        const angle = (e / count) * Math.PI * 2 + t * angularSpeed;
+        dummy.position.set(
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        );
+        dummy.updateMatrix();
+        mesh.setMatrixAt(e, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    });
+  });
+
+  return (
+    <group>
+      {shells.map((count, shellIdx) => {
+        const radius = minOrbitRadius + shellIdx * shellSpacing;
+        return (
+          <group
+            key={shellIdx}
+            ref={(el) => { shellGroupRefs.current[shellIdx] = el; }}
+          >
+            {/* Orbit ring — flat in XZ plane */}
+            <mesh rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[radius, 0.01, 8, 64]} />
+              <meshStandardMaterial
+                color="#666666"
+                transparent
+                opacity={0.3}
+              />
+            </mesh>
+            {/* Electrons */}
+            <instancedMesh
+              ref={(el) => {
+                electronRefs.current[shellIdx] = el;
+              }}
+              args={[undefined, undefined, count]}
+            >
+              <sphereGeometry args={[0.05, 8, 8]} />
+              <meshStandardMaterial
+                color="#2ecc71"
+                emissive="#2ecc71"
+                emissiveIntensity={0.8}
+              />
+            </instancedMesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function Scene({
   isotope,
   animation,
   isMobile,
   temperature,
+  microwaving = false,
 }: NucleusViewProps) {
   const total = isotope ? isotope.protons + isotope.neutrons : 0;
-  const cameraZ = total > 0 ? 3 + Math.pow(total, 1 / 3) * 1.2 : 5;
+  const shellCount = isotope ? getElectronShells(isotope.protons).length : 0;
+  const cameraZ = total > 0 ? 3 + Math.pow(total, 1 / 3) * 1.2 + shellCount * 0.8 : 5;
+
+  const nucleusRadius = total > 0 ? NUCLEON_RADIUS * 1.4 * Math.pow(total, 1 / 3) : 1;
 
   const { camera } = useThree();
   const orbitControlsRef = useRef<OrbitControlsImpl>(null);
@@ -420,13 +604,22 @@ function Scene({
       <pointLight position={[0, 10, 0]} intensity={0.4} color="#ffffff" />
       <hemisphereLight args={['#ffffff', '#444466', 0.4]} />
 
+      <BackgroundNeutrons />
+
       {isotope ? (
-        <NucleusMesh
-          isotope={isotope}
-          isMobile={isMobile}
-          temperature={temperature}
-          orbitControlsRef={orbitControlsRef}
-        />
+        <>
+          <NucleusMesh
+            isotope={isotope}
+            isMobile={isMobile}
+            temperature={temperature}
+            orbitControlsRef={orbitControlsRef}
+          />
+          <ElectronShells
+            protons={isotope.protons}
+            nucleusRadius={nucleusRadius}
+            microwaving={microwaving}
+          />
+        </>
       ) : (
         <EmptyState />
       )}
@@ -462,6 +655,7 @@ export default function NucleusView({
   animation,
   isMobile,
   temperature,
+  microwaving = false,
 }: NucleusViewProps) {
   const bg = getBackgroundColor(temperature);
 
@@ -476,6 +670,7 @@ export default function NucleusView({
         animation={animation}
         isMobile={isMobile}
         temperature={temperature}
+        microwaving={microwaving}
       />
     </Canvas>
   );

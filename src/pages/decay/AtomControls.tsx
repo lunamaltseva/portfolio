@@ -13,16 +13,40 @@ interface AtomControlsProps {
   onClear: () => void;
   isAnimating: boolean;
   isMobile: boolean;
+  microwaving: boolean;
 }
 
-const REACTION_ICONS: Record<ReactionType, string> = {
+const REACTION_ICONS: Record<ReactionType, string | null> = {
   alpha: 'α',
   beta: 'β⁻',
   gamma: 'γ',
   'neutron-collision': 'n',
   'deuterium-collision': 'D',
   fission: '⚛',
+  microwave: null, // uses SVG
 };
+
+function MicrowaveIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="4" width="20" height="14" rx="2" />
+      <rect x="4" y="6" width="11" height="10" rx="1" fill="none" />
+      <circle cx="18" cy="9" r="1" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="13" r="1" fill="currentColor" stroke="none" />
+      <path d="M7 16 C7 12, 8 10, 9 9" />
+      <path d="M10 16 C10 13, 11 11, 12 10" />
+    </svg>
+  );
+}
 
 const REACTION_ORDER: ReactionType[] = [
   'alpha',
@@ -31,6 +55,7 @@ const REACTION_ORDER: ReactionType[] = [
   'neutron-collision',
   'deuterium-collision',
   'fission',
+  'microwave',
 ];
 
 function formatTemperature(t: number): string {
@@ -87,6 +112,7 @@ export default function AtomControls({
   onClear,
   isAnimating,
   isMobile,
+  microwaving,
 }: AtomControlsProps) {
   const availableTypes = useMemo(
     () => new Set(availableReactions.map((r) => r.type)),
@@ -244,10 +270,30 @@ export default function AtomControls({
           {REACTION_ORDER.map((type) => {
             const isAvailable = availableTypes.has(type);
             const exists = allTypes.has(type);
-            const disabled = !isAvailable || isAnimating || !currentIsotope;
+            const isMicrowave = type === 'microwave';
+            const gammaAvailable = availableTypes.has('gamma');
+
+            // When gamma is available, force user to perform gamma first
+            // (only gamma and microwave-toggle are allowed)
+            const gammaBlocked = gammaAvailable && type !== 'gamma' && !isMicrowave;
+
+            // Microwave: disabled only when animating (not by microwaving itself since it's a toggle)
+            // Other reactions: disabled when microwaving, animating, not available, or gamma-blocked
+            const disabled = isMicrowave
+              ? !isAvailable || isAnimating || !currentIsotope
+              : !isAvailable || isAnimating || !currentIsotope || microwaving || gammaBlocked;
+
             const description = reactionDescriptions.get(type);
 
             if (!exists && !currentIsotope) return null;
+
+            const microwaveActiveStyle: React.CSSProperties = isMicrowave && microwaving
+              ? {
+                  border: '1px solid #f39c12',
+                  background: 'rgba(243, 156, 18, 0.25)',
+                  boxShadow: '0 0 12px rgba(243, 156, 18, 0.3)',
+                }
+              : {};
 
             return (
               <button
@@ -256,7 +302,8 @@ export default function AtomControls({
                 disabled={disabled}
                 style={{
                   ...buttonBase,
-                  ...(disabled ? disabledStyle : activeStyle),
+                  ...(disabled && !(isMicrowave && microwaving) ? disabledStyle : activeStyle),
+                  ...microwaveActiveStyle,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
@@ -269,18 +316,23 @@ export default function AtomControls({
                     width: '24px',
                     textAlign: 'center',
                     flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  {REACTION_ICONS[type]}
+                  {isMicrowave ? <MicrowaveIcon /> : REACTION_ICONS[type]}
                 </span>
                 <span style={{ flexGrow: 1 }}>
-                  {type === 'neutron-collision'
-                    ? 'Neutron'
-                    : type === 'deuterium-collision'
-                      ? 'Deuterium'
-                      : type.charAt(0).toUpperCase() + type.slice(1)}
+                  {isMicrowave
+                    ? (microwaving ? 'Stop Microwave' : 'Microwave')
+                    : type === 'neutron-collision'
+                      ? 'Neutron'
+                      : type === 'deuterium-collision'
+                        ? 'Deuterium'
+                        : type.charAt(0).toUpperCase() + type.slice(1)}
                 </span>
-                {exists && isAvailable && (
+                {exists && isAvailable && !isMicrowave && (
                   <span
                     style={{
                       width: '6px',
@@ -288,6 +340,18 @@ export default function AtomControls({
                       borderRadius: '50%',
                       background: '#2ecc71',
                       flexShrink: 0,
+                    }}
+                  />
+                )}
+                {isMicrowave && microwaving && (
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: '#f39c12',
+                      flexShrink: 0,
+                      animation: 'pulse 0.5s ease-in-out infinite alternate',
                     }}
                   />
                 )}

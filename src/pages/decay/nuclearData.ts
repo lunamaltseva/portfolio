@@ -4,7 +4,8 @@ export type ReactionType =
   | 'gamma'
   | 'neutron-collision'
   | 'deuterium-collision'
-  | 'fission';
+  | 'fission'
+  | 'microwave';
 
 export interface Particle {
   label: string;
@@ -144,6 +145,15 @@ const HE4_PARTICLE: Particle = {
   radius: 0.35,
 };
 
+const SR96_FRAGMENT: Particle = {
+  label: 'Strontium-96',
+  symbol: 'Sr-96',
+  protons: 38,
+  neutrons: 58,
+  color: '#e67e22',
+  radius: 0.85,
+};
+
 // --- Isotope registry ---
 
 function iso(
@@ -172,9 +182,9 @@ const ISOTOPES: Record<string, Isotope> = {
   'Th-230': iso('Th-230', '²³⁰Th', 'Thorium-230', 90, 140),
   'Pa-231': iso('Pa-231', '²³¹Pa', 'Protactinium-231', 91, 140),
   'Pa-234': iso('Pa-234', '²³⁴Pa', 'Protactinium-234', 91, 143),
-  'Ac-227': iso('Ac-227', '²²⁷Ac', 'Actinium-227', 89, 138),
-  'Ra-226': iso('Ra-226', '²²⁶Ra', 'Radium-226', 88, 138),
-  'Ra-228': iso('Ra-228', '²²⁸Ra', 'Radium-228', 88, 140),
+  'Ac-227': iso('Ac-227', '²²⁷Ac', 'Actinium-227', 89, 138, true),
+  'Ra-226': iso('Ra-226', '²²⁶Ra', 'Radium-226', 88, 138, true),
+  'Ra-228': iso('Ra-228', '²²⁸Ra', 'Radium-228', 88, 140, true),
   'Np-239': iso('Np-239', '²³⁹Np', 'Neptunium-239', 93, 146),
   'Pu-239': iso('Pu-239', '²³⁹Pu', 'Plutonium-239', 94, 145),
   'Ba-144': iso('Ba-144', '¹⁴⁴Ba', 'Barium-144', 56, 88),
@@ -184,7 +194,18 @@ const ISOTOPES: Record<string, Isotope> = {
   'Rb-90': iso('Rb-90', '⁹⁰Rb', 'Rubidium-90', 37, 53),
   'Sr-90': iso('Sr-90', '⁹⁰Sr', 'Strontium-90', 38, 52),
   'Zr-94': iso('Zr-94', '⁹⁴Zr', 'Zirconium-94', 40, 54, true),
-  'Te-139': iso('Te-139', '¹³⁹Te', 'Tellurium-139', 52, 87),
+  'Te-139': iso('Te-139', '¹³⁹Te', 'Tellurium-139', 52, 87, true),
+  'Y-90': iso('Y-90', '⁹⁰Y', 'Yttrium-90', 39, 51),
+  'Zr-90': iso('Zr-90', '⁹⁰Zr', 'Zirconium-90', 40, 50, true),
+  'Li-6': iso('Li-6', '⁶Li', 'Lithium-6', 3, 3, true),
+  'Li-7': iso('Li-7', '⁷Li', 'Lithium-7', 3, 4, true),
+  'Be-7': iso('Be-7', '⁷Be', 'Beryllium-7', 4, 3),
+  'Xe-137': iso('Xe-137', '¹³⁷Xe', 'Xenon-137', 54, 83),
+  'Cs-137': iso('Cs-137', '¹³⁷Cs', 'Caesium-137', 55, 82),
+  'Ba-137': iso('Ba-137', '¹³⁷Ba', 'Barium-137', 56, 81, true),
+  'Sr-96': iso('Sr-96', '⁹⁶Sr', 'Strontium-96', 38, 58),
+  'Y-96': iso('Y-96', '⁹⁶Y', 'Yttrium-96', 39, 57),
+  'Zr-96': iso('Zr-96', '⁹⁶Zr', 'Zirconium-96', 40, 56, true),
 };
 
 // --- Reaction definitions per isotope ---
@@ -218,9 +239,9 @@ const REGISTRY: Record<string, IsotopeEntry> = {
       {
         type: 'fission',
         label: 'Fission',
-        description: '²³⁵U + n → ¹⁴⁴Ba + ⁹⁰Kr + 2n',
-        productId: 'Ba-144',
-        ejectiles: [KR90_FRAGMENT, NEUTRON, NEUTRON],
+        description: '²³⁵U + n → ¹³⁷Xe + ⁹⁶Sr + 3n',
+        productId: 'Xe-137',
+        ejectiles: [SR96_FRAGMENT, NEUTRON, NEUTRON, NEUTRON],
         minTemperature: 0,
         maxTemperature: Infinity,
         requiresExcitedState: false,
@@ -333,7 +354,19 @@ const REGISTRY: Record<string, IsotopeEntry> = {
   },
   'He-4': {
     isotope: ISOTOPES['He-4'],
-    reactions: [],
+    reactions: [
+      {
+        type: 'deuterium-collision',
+        label: 'D-α Fusion',
+        description: '⁴He + ²H → ⁶Li + γ',
+        productId: 'Li-6',
+        ejectiles: [GAMMA_RAY],
+        minTemperature: 150_000_000,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '1.47 MeV',
+      },
+    ],
   },
   'Th-231': {
     isotope: ISOTOPES['Th-231'],
@@ -570,6 +603,17 @@ const REGISTRY: Record<string, IsotopeEntry> = {
         requiresExcitedState: false,
         energyReleased: '3.16 MeV',
       },
+      {
+        type: 'gamma',
+        label: 'Gamma Emission',
+        description: '¹⁴⁴Ba* → ¹⁴⁴Ba + γ',
+        productId: 'Ba-144',
+        ejectiles: [GAMMA_RAY],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: true,
+        energyReleased: '~0.5 MeV',
+      },
     ],
   },
   'Kr-90': {
@@ -626,14 +670,176 @@ const REGISTRY: Record<string, IsotopeEntry> = {
   },
   'Sr-90': {
     isotope: ISOTOPES['Sr-90'],
-    reactions: [],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '⁹⁰Sr → ⁹⁰Y + e⁻ + ν̄ₑ',
+        productId: 'Y-90',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '0.55 MeV',
+      },
+    ],
   },
   'Zr-94': {
     isotope: ISOTOPES['Zr-94'],
-    reactions: [],
+    reactions: [
+      {
+        type: 'gamma',
+        label: 'Gamma Emission',
+        description: '⁹⁴Zr* → ⁹⁴Zr + γ',
+        productId: 'Zr-94',
+        ejectiles: [GAMMA_RAY],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: true,
+        energyReleased: '~0.9 MeV',
+      },
+    ],
   },
   'Te-139': {
     isotope: ISOTOPES['Te-139'],
+    reactions: [],
+  },
+  'Y-90': {
+    isotope: ISOTOPES['Y-90'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '⁹⁰Y → ⁹⁰Zr + e⁻ + ν̄ₑ',
+        productId: 'Zr-90',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '2.28 MeV',
+      },
+    ],
+  },
+  'Zr-90': {
+    isotope: ISOTOPES['Zr-90'],
+    reactions: [],
+  },
+  'Li-6': {
+    isotope: ISOTOPES['Li-6'],
+    reactions: [],
+  },
+  'Li-7': {
+    isotope: ISOTOPES['Li-7'],
+    reactions: [],
+  },
+  'Be-7': {
+    isotope: ISOTOPES['Be-7'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Electron Capture',
+        description: '⁷Be + e⁻ → ⁷Li + νₑ',
+        productId: 'Li-7',
+        ejectiles: [],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '0.86 MeV',
+      },
+    ],
+  },
+  'Xe-137': {
+    isotope: ISOTOPES['Xe-137'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '¹³⁷Xe → ¹³⁷Cs + e⁻ + ν̄ₑ',
+        productId: 'Cs-137',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '4.17 MeV',
+      },
+      {
+        type: 'gamma',
+        label: 'Gamma Emission',
+        description: '¹³⁷Xe* → ¹³⁷Xe + γ',
+        productId: 'Xe-137',
+        ejectiles: [GAMMA_RAY],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: true,
+        energyReleased: '~0.6 MeV',
+      },
+    ],
+  },
+  'Cs-137': {
+    isotope: ISOTOPES['Cs-137'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '¹³⁷Cs → ¹³⁷Ba + e⁻ + ν̄ₑ',
+        productId: 'Ba-137',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '1.18 MeV',
+      },
+      {
+        type: 'microwave',
+        label: 'Microwave',
+        description: 'Excite electrons with microwave radiation',
+        productId: 'Cs-137',
+        ejectiles: [],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '~0.001 eV',
+      },
+    ],
+  },
+  'Ba-137': {
+    isotope: ISOTOPES['Ba-137'],
+    reactions: [],
+  },
+  'Sr-96': {
+    isotope: ISOTOPES['Sr-96'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '⁹⁶Sr → ⁹⁶Y + e⁻ + ν̄ₑ',
+        productId: 'Y-96',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '5.37 MeV',
+      },
+    ],
+  },
+  'Y-96': {
+    isotope: ISOTOPES['Y-96'],
+    reactions: [
+      {
+        type: 'beta',
+        label: 'Beta Decay',
+        description: '⁹⁶Y → ⁹⁶Zr + e⁻ + ν̄ₑ',
+        productId: 'Zr-96',
+        ejectiles: [ELECTRON, ANTINEUTRINO],
+        minTemperature: 0,
+        maxTemperature: Infinity,
+        requiresExcitedState: false,
+        energyReleased: '7.10 MeV',
+      },
+    ],
+  },
+  'Zr-96': {
+    isotope: ISOTOPES['Zr-96'],
     reactions: [],
   },
 };
@@ -677,6 +883,19 @@ export function temperatureToSliderPosition(temp: number): number {
   const maxLog = Math.log10(150_000_000);
   const logVal = Math.log10(temp);
   return Math.min(1, Math.max(0, (logVal - minLog) / (maxLog - minLog)));
+}
+
+/** Compute Bohr-model electron shell occupancies for a given atomic number. */
+export function getElectronShells(protons: number): number[] {
+  const maxPerShell = [2, 8, 18, 32, 32, 18, 8];
+  const shells: number[] = [];
+  let remaining = protons;
+  for (const max of maxPerShell) {
+    if (remaining <= 0) break;
+    shells.push(Math.min(remaining, max));
+    remaining -= Math.min(remaining, max);
+  }
+  return shells;
 }
 
 export { ISOTOPES, DEUTERIUM_PARTICLE, HE4_PARTICLE, NEUTRON as NEUTRON_PARTICLE, BA144_FRAGMENT };

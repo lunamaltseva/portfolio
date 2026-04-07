@@ -243,6 +243,56 @@ function IncomingParticle({
   );
 }
 
+function EnergyLabel({
+  phase,
+  startedAt,
+  energy,
+}: {
+  phase: string;
+  startedAt: number;
+  energy: string;
+}) {
+  const ref = useRef<Mesh>(null);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    const elapsed = (performance.now() - startedAt) / 1000;
+
+    if (phase === 'reacting' || phase === 'departing') {
+      ref.current.visible = true;
+      // Float upward and fade
+      const t = phase === 'reacting' ? elapsed : elapsed + 0.6;
+      ref.current.position.set(0, 1.5 + t * 1.2, 0);
+    } else {
+      ref.current.visible = false;
+    }
+  });
+
+  return (
+    <mesh ref={ref} visible={false}>
+      <Html
+        center
+        style={{
+          color: '#f1c40f',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          fontFamily: 'var(--font-primary), sans-serif',
+          background: 'rgba(0,0,0,0.7)',
+          padding: '4px 12px',
+          borderRadius: '6px',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          border: '1px solid rgba(241, 196, 15, 0.3)',
+          textShadow: '0 0 8px rgba(241, 196, 15, 0.5)',
+        }}
+      >
+        ⚡ {energy}
+      </Html>
+    </mesh>
+  );
+}
+
 function ReactionFlash({
   phase,
   startedAt,
@@ -280,7 +330,7 @@ function ReactionFlash({
 export default function ParticleAnimation({
   animation,
 }: ParticleAnimationProps) {
-  const { phase, startedAt, ejectiles, incomingParticle, type } = animation;
+  const { phase, startedAt, ejectiles, incomingParticle, type, energyReleased } = animation;
 
   const isBetaDecay = type === 'beta';
 
@@ -338,6 +388,11 @@ export default function ParticleAnimation({
   return (
     <group>
       <ReactionFlash phase={phase} startedAt={startedAt} />
+
+      {/* Energy released label for fission */}
+      {energyReleased && (
+        <EnergyLabel phase={phase} startedAt={startedAt} energy={energyReleased} />
+      )}
 
       {/* Neutron / Deuterium incoming (non-beta) */}
       {incomingParticle && (

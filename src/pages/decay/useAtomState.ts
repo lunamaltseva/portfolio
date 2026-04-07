@@ -19,6 +19,7 @@ export interface AnimationState {
   phase: AnimationPhase;
   startedAt: number;
   productName: string;
+  energyReleased?: string;
 }
 
 export interface AtomState {
@@ -28,6 +29,7 @@ export interface AtomState {
   availableReactions: Reaction[];
   allReactions: Reaction[];
   animation: AnimationState | null;
+  microwaving: boolean;
 }
 
 const PHASE_DURATIONS: Record<AnimationPhase, number> = {
@@ -42,6 +44,7 @@ export function useAtomState() {
   const [isExcited, setIsExcited] = useState(false);
   const [temperature, setTemperature] = useState(0);
   const [animation, setAnimation] = useState<AnimationState | null>(null);
+  const [microwaving, setMicrowaving] = useState(false);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,6 +109,13 @@ export function useAtomState() {
 
   const triggerReaction = useCallback(
     (type: ReactionType) => {
+      if (type === 'microwave' && currentIsotope) {
+        // Toggle: if already microwaving, turn off; otherwise turn on
+        setMicrowaving((prev) => !prev);
+        return;
+      }
+      // Block all other reactions while microwaving
+      if (microwaving) return;
       if (animation) return;
       if (!currentIsotope) return;
 
@@ -125,6 +135,7 @@ export function useAtomState() {
         ejectiles: reaction.ejectiles,
         incomingParticle,
         productName: reaction.description,
+        energyReleased: type === 'fission' ? reaction.energyReleased : undefined,
       };
 
       const needsApproach = incomingParticle !== null;
@@ -153,12 +164,13 @@ export function useAtomState() {
         advancePhase(startPhase, reaction, animationData);
       }, PHASE_DURATIONS[startPhase]);
     },
-    [animation, currentIsotope, availableReactions, advancePhase]
+    [animation, currentIsotope, availableReactions, advancePhase, microwaving]
   );
 
   const selectIsotope = useCallback((id: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setAnimation(null);
+    setMicrowaving(false);
 
     const entry = getIsotopeEntry(id);
     if (entry) {
@@ -170,6 +182,7 @@ export function useAtomState() {
   const clearAtom = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setAnimation(null);
+    setMicrowaving(false);
     setCurrentIsotope(null);
     setIsExcited(false);
     clearLayoutCache();
@@ -182,6 +195,7 @@ export function useAtomState() {
     availableReactions,
     allReactions,
     animation,
+    microwaving,
   };
 
   return {
