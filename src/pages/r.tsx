@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 export default function Redirect() {
   useEffect(() => {
-    window.location.replace('https://canva.link/lalgm92ywre31hv');
+    window.location.replace('https://www.canva.com/design/DAHG-0Pr-LU/lbtN7P1ZEV0PxzHvxYblGg/edit');
   }, []);
 
   return (

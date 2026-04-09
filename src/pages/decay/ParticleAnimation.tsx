@@ -287,7 +287,7 @@ function EnergyLabel({
           textShadow: '0 0 8px rgba(241, 196, 15, 0.5)',
         }}
       >
-        ⚡ {energy}
+        {energy}
       </Html>
     </mesh>
   );

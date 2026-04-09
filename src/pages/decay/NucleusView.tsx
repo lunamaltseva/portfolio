@@ -188,6 +188,15 @@ function NucleusMesh({
         if (cur.distanceTo(rest) > 0.001) {
           allSettled = false;
         }
+
+        // Apply jitter on top of the lerp so vibration continues during snap-back
+        if (jitterStrength > 0.0001) {
+          cur.set(
+            cur.x + (Math.random() - 0.5) * 2 * jitterStrength,
+            cur.y + (Math.random() - 0.5) * 2 * jitterStrength,
+            cur.z + (Math.random() - 0.5) * 2 * jitterStrength
+          );
+        }
       }
 
       syncMeshes();

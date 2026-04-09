@@ -67,6 +67,7 @@ export default function Decay() {
         isotope={state.currentIsotope}
         isExcited={state.isExcited}
         isMobile={isMobile}
+        microwaveStartedAt={state.microwaveStartedAt}
       />
 
       {/* Controls overlay — right side (desktop) or bottom (mobile) */}

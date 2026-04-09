@@ -9,30 +9,36 @@ import About from './pages/About';
 import Design from './pages/Design';
 import Programming from './pages/Programming';
 import Redirect from './pages/r';
+import Poetry from './pages/Poetry';
 
 const Decay = lazy(() => import('./pages/Decay'));
 
 function App() {
   return (
-    <div className="app-wrapper">
-      <Navbar />
-      <Routes>
-        <Route path="/" element={
-          <main className="main-content">
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: '#000000' }} />
-            <Hero />
-          </main>
-        } />
-        <Route path="/about" element={<About />} />
-        <Route path="/writing/fiction" element={<Fiction />} />
-        <Route path="/writing/academic" element={<Academic />} />
-        <Route path="/design" element={<Design />} />
-        <Route path="/programming" element={<Programming />} />
-        <Route path="/r" element={<Redirect />} />
-        <Route path="/decay" element={<Suspense fallback={<div style={{ background: '#000', minHeight: '100vh' }} />}><Decay /></Suspense>} />
-      </Routes>
-      <Footer />
-    </div>
+    <Routes>
+      <Route path="/poetry" element={<Poetry />} />
+      <Route path="*" element={
+        <div className="app-wrapper">
+          <Navbar />
+          <Routes>
+            <Route path="/" element={
+              <main className="main-content">
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: '#000000' }} />
+                <Hero />
+              </main>
+            } />
+            <Route path="/about" element={<About />} />
+            <Route path="/writing/fiction" element={<Fiction />} />
+            <Route path="/writing/academic" element={<Academic />} />
+            <Route path="/design" element={<Design />} />
+            <Route path="/programming" element={<Programming />} />
+            <Route path="/r" element={<Redirect />} />
+            <Route path="/decay" element={<Suspense fallback={<div style={{ background: '#000', minHeight: '100vh' }} />}><Decay /></Suspense>} />
+          </Routes>
+          <Footer />
+        </div>
+      } />
+    </Routes>
   );
 }
 

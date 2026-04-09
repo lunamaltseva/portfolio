@@ -1,12 +1,61 @@
+import { useState, useEffect } from 'react';
 import type { Isotope } from './nuclearData';
+
+const CS_FREQUENCY = 9_192_631_770;
+
+function formatCycles(cycles: number): string {
+  return cycles.toLocaleString();
+}
+
+function MicrowaveCounter({ startedAt }: { startedAt: number }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 16);
+    return () => clearInterval(id);
+  }, []);
+
+  const elapsedMs = now - startedAt;
+  const elapsedSec = elapsedMs / 1000;
+  const cycles = Math.floor(elapsedSec * CS_FREQUENCY);
+  const seconds = (cycles / CS_FREQUENCY).toFixed(9);
+
+  return (
+    <div
+      style={{
+        marginTop: '12px',
+        padding: '10px 12px',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '0.375rem',
+        fontFamily: 'monospace',
+        fontSize: '0.7rem',
+        lineHeight: '1.6',
+        color: '#c8c4bc',
+      }}
+    >
+      <div style={{
+        fontFamily: 'CustomRegular, sans-serif',
+        fontSize: '0.65rem',
+        color: '#888',
+        marginBottom: '4px',
+      }}>
+        Cs-133 hyperfine transition
+      </div>
+      <div>{formatCycles(cycles)} cycles</div>
+      <div style={{ color: '#888' }}>= {seconds} s</div>
+    </div>
+  );
+}
 
 interface AtomInfoProps {
   isotope: Isotope | null;
   isExcited: boolean;
   isMobile: boolean;
+  microwaveStartedAt?: number | null;
 }
 
-export default function AtomInfo({ isotope, isExcited, isMobile }: AtomInfoProps) {
+export default function AtomInfo({ isotope, isExcited, isMobile, microwaveStartedAt }: AtomInfoProps) {
   if (!isotope) {
     return (
       <div
@@ -22,8 +71,8 @@ export default function AtomInfo({ isotope, isExcited, isMobile }: AtomInfoProps
           borderRadius: '0.75rem',
           padding: isMobile ? '12px 16px' : '16px 24px',
           color: '#888',
-          fontFamily: 'var(--font-primary), sans-serif',
-          fontSize: isMobile ? '14px' : '16px',
+          fontFamily: 'CustomRegular, sans-serif',
+          fontSize: isMobile ? '0.85rem' : '0.95rem',
         }}
       >
         Select an atom to begin
@@ -47,16 +96,15 @@ export default function AtomInfo({ isotope, isExcited, isMobile }: AtomInfoProps
         borderRadius: '0.75rem',
         padding: isMobile ? '12px 16px' : '20px 28px',
         color: '#ffffff',
-        fontFamily: 'var(--font-primary), sans-serif',
+        fontFamily: 'CustomRegular, sans-serif',
         minWidth: isMobile ? '140px' : '180px',
       }}
     >
       <div
         style={{
-          fontFamily: 'var(--font-title), sans-serif',
-          fontSize: isMobile ? '22px' : '28px',
-          marginBottom: '8px',
-          letterSpacing: '0.02em',
+          fontFamily: 'CustomTitle, sans-serif',
+          fontSize: isMobile ? '1.4rem' : '1.75rem',
+          marginBottom: '6px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
@@ -66,36 +114,36 @@ export default function AtomInfo({ isotope, isExcited, isMobile }: AtomInfoProps
         {isExcited && (
           <span
             style={{
-              fontSize: '12px',
-              color: '#f39c12',
-              fontFamily: 'var(--font-primary), sans-serif',
-              animation: 'pulse 1.5s ease-in-out infinite',
+              fontSize: '0.7rem',
+              color: '#d4d0c8',
+              fontFamily: 'CustomRegular, sans-serif',
+              fontStyle: 'italic',
             }}
           >
-            (excited)
+            excited
           </span>
         )}
       </div>
 
       <div
         style={{
-          fontSize: isMobile ? '13px' : '15px',
-          color: '#ccc',
+          fontSize: isMobile ? '0.75rem' : '0.85rem',
+          color: '#c8c4bc',
           lineHeight: '1.6',
         }}
       >
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '14px' }}>
           <span>
-            <span style={{ color: '#888' }}>Z</span>{' '}
-            <span style={{ color: '#e74c3c' }}>{isotope.protons}</span>
+            <span style={{ color: '#888' }}>Z </span>
+            {isotope.protons}
           </span>
           <span>
-            <span style={{ color: '#888' }}>N</span>{' '}
-            <span style={{ color: '#7f8c8d' }}>{isotope.neutrons}</span>
+            <span style={{ color: '#888' }}>N </span>
+            {isotope.neutrons}
           </span>
           <span>
-            <span style={{ color: '#888' }}>A</span>{' '}
-            <span style={{ color: '#fff' }}>{massNumber}</span>
+            <span style={{ color: '#888' }}>A </span>
+            {massNumber}
           </span>
         </div>
       </div>
@@ -104,14 +152,21 @@ export default function AtomInfo({ isotope, isExcited, isMobile }: AtomInfoProps
         <div
           style={{
             marginTop: '8px',
-            fontSize: '12px',
-            color: '#2ecc71',
-            fontWeight: 'bold',
-            letterSpacing: '0.05em',
+            display: 'inline-block',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            fontSize: '0.65rem',
+            color: '#c8c4bc',
           }}
         >
-          STABLE
+          Stable
         </div>
+      )}
+
+      {microwaveStartedAt && (
+        <MicrowaveCounter startedAt={microwaveStartedAt} />
       )}
     </div>
   );

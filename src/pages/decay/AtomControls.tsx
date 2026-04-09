@@ -16,17 +16,17 @@ interface AtomControlsProps {
   microwaving: boolean;
 }
 
-const REACTION_ICONS: Record<ReactionType, string | null> = {
-  alpha: 'α',
-  beta: 'β⁻',
-  gamma: 'γ',
-  'neutron-collision': 'n',
-  'deuterium-collision': 'D',
-  fission: '⚛',
-  microwave: null, // uses SVG
+const REACTION_LABELS: Record<ReactionType, string> = {
+  alpha: 'Alpha decay',
+  beta: 'Beta decay',
+  gamma: 'Gamma emission',
+  'neutron-collision': 'Neutron collision',
+  'deuterium-collision': 'Deuterium collision',
+  fission: 'Fission',
+  microwave: 'Microwave',
 };
 
-function MicrowaveIcon({ size = 16 }: { size?: number }) {
+function MicrowaveIcon({ size = 14 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -66,11 +66,9 @@ function formatTemperature(t: number): string {
   return `${(t / 1_000_000_000).toFixed(1)} GK`;
 }
 
-// Logarithmic slider: position [0,1] -> temperature [0, 150M]
 function positionToTemperature(pos: number): number {
   if (pos <= 0) return 0;
-  // log scale from 100 to 150,000,000
-  const minLog = 2; // log10(100)
+  const minLog = 2;
   const maxLog = Math.log10(150_000_000);
   const logVal = minLog + pos * (maxLog - minLog);
   return Math.round(Math.pow(10, logVal));
@@ -78,7 +76,6 @@ function positionToTemperature(pos: number): number {
 
 const temperatureToPosition = temperatureToSliderPosition;
 
-// Temperature gradient color
 function getTemperatureColor(pos: number): string {
   if (pos < 0.3) {
     const t = pos / 0.3;
@@ -150,11 +147,11 @@ export default function AtomControls({
         left: 0,
         right: 0,
         zIndex: 10,
-        backgroundColor: 'rgba(20, 20, 20, 0.92)',
+        backgroundColor: 'rgba(20, 20, 20, 0.85)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         borderTop: '1px solid #333',
-        borderRadius: '1rem 1rem 0 0',
+        borderRadius: '0.75rem 0.75rem 0 0',
         padding: '16px',
         maxHeight: '45vh',
         overflowY: 'auto',
@@ -171,223 +168,130 @@ export default function AtomControls({
         border: '1px solid #333',
         borderRadius: '0.75rem',
         padding: '20px',
-        width: '240px',
+        width: '230px',
       };
-
-  const buttonBase: React.CSSProperties = {
-    border: '1px solid #444',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    fontSize: '13px',
-    fontFamily: 'var(--font-primary), sans-serif',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    background: 'rgba(255,255,255,0.05)',
-    color: '#fff',
-    textAlign: 'left',
-    width: '100%',
-  };
-
-  const disabledStyle: React.CSSProperties = {
-    opacity: 0.25,
-    cursor: 'not-allowed',
-    border: '1px solid #2a2a2a',
-  };
-
-  const activeStyle: React.CSSProperties = {
-    border: '1px solid #e74c3c',
-    background: 'rgba(231, 76, 60, 0.15)',
-    boxShadow: '0 0 8px rgba(231, 76, 60, 0.2)',
-  };
 
   return (
     <div style={panelStyle}>
-      {/* Isotope selector */}
-      <div style={{ marginBottom: '16px' }}>
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#888',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            marginBottom: '8px',
-            fontFamily: 'var(--font-primary), sans-serif',
-          }}
-        >
-          Select Atom
-        </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {STARTER_ISOTOPES.map((iso) => (
+      {/* Isotope pills */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '16px' }}>
+        {STARTER_ISOTOPES.map((iso) => (
+          <button
+            key={iso.id}
+            onClick={() => onSelectIsotope(iso.id)}
+            disabled={isAnimating}
+            style={{
+              flex: 1,
+              padding: '0.5rem 1rem',
+              borderRadius: '9999px',
+              border: currentIsotope?.id === iso.id
+                ? '1px solid rgba(255,255,255,0.25)'
+                : '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: currentIsotope?.id === iso.id
+                ? 'rgba(255,255,255,0.07)'
+                : 'transparent',
+              color: currentIsotope?.id === iso.id ? '#fff' : '#c8c4bc',
+              fontFamily: 'CustomRegular, sans-serif',
+              fontSize: '0.75rem',
+              cursor: isAnimating ? 'not-allowed' : 'pointer',
+              opacity: isAnimating ? 0.4 : 1,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {iso.id}
+          </button>
+        ))}
+      </div>
+
+      {/* Reactions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+        {REACTION_ORDER.map((type) => {
+          const isAvailable = availableTypes.has(type);
+          const exists = allTypes.has(type);
+          const isMicrowaveBtn = type === 'microwave';
+          const gammaAvailable = availableTypes.has('gamma');
+          const gammaBlocked = gammaAvailable && type !== 'gamma' && !isMicrowaveBtn;
+
+          const disabled = isMicrowaveBtn
+            ? !isAvailable || isAnimating || !currentIsotope
+            : !isAvailable || isAnimating || !currentIsotope || microwaving || gammaBlocked;
+
+          if (!exists && !currentIsotope) return null;
+
+          const description = reactionDescriptions.get(type);
+          const isActive = isMicrowaveBtn && microwaving;
+
+          return (
             <button
-              key={iso.id}
-              onClick={() => onSelectIsotope(iso.id)}
-              disabled={isAnimating}
+              key={type}
+              onClick={() => !disabled && onReaction(type)}
+              disabled={disabled}
+              title={description || type}
               style={{
-                ...buttonBase,
-                width: 'auto',
-                flex: '1',
-                textAlign: 'center',
-                padding: '8px 10px',
-                ...(currentIsotope?.id === iso.id
-                  ? {
-                      border: '1px solid #fff',
-                      background: 'rgba(255,255,255,0.12)',
-                    }
-                  : {}),
-                ...(isAnimating ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 10px',
+                borderRadius: '0.375rem',
+                border: 'none',
+                backgroundColor: isActive
+                  ? 'rgba(255,255,255,0.1)'
+                  : disabled
+                    ? 'transparent'
+                    : 'transparent',
+                color: isActive
+                  ? '#fff'
+                  : disabled
+                    ? '#555'
+                    : '#c8c4bc',
+                fontFamily: 'CustomRegular, sans-serif',
+                fontSize: '0.8rem',
+                cursor: disabled && !isActive ? 'not-allowed' : 'pointer',
+                transition: 'color 0.2s ease, background-color 0.2s ease',
+                width: '100%',
+                textAlign: 'left',
               }}
             >
-              {iso.id}
+              <span style={{
+                width: '20px',
+                textAlign: 'center',
+                flexShrink: 0,
+                fontSize: isMicrowaveBtn ? '14px' : '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {isMicrowaveBtn ? <MicrowaveIcon /> : (
+                  type === 'alpha' ? 'α' :
+                  type === 'beta' ? 'β' :
+                  type === 'gamma' ? 'γ' :
+                  type === 'neutron-collision' ? 'n' :
+                  type === 'deuterium-collision' ? 'D' :
+                  type === 'fission' ? '⚛' : ''
+                )}
+              </span>
+              <span>
+                {isMicrowaveBtn
+                  ? (microwaving ? 'Stop' : REACTION_LABELS[type])
+                  : REACTION_LABELS[type]}
+              </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Divider */}
-      <div
-        style={{
-          height: '1px',
-          background: 'linear-gradient(to right, transparent, #444, transparent)',
-          margin: '12px 0',
-        }}
-      />
-
-      {/* Reaction buttons */}
+      {/* Temperature */}
       <div style={{ marginBottom: '16px' }}>
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#888',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            marginBottom: '8px',
-            fontFamily: 'var(--font-primary), sans-serif',
-          }}
-        >
-          Reactions
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {REACTION_ORDER.map((type) => {
-            const isAvailable = availableTypes.has(type);
-            const exists = allTypes.has(type);
-            const isMicrowave = type === 'microwave';
-            const gammaAvailable = availableTypes.has('gamma');
-
-            // When gamma is available, force user to perform gamma first
-            // (only gamma and microwave-toggle are allowed)
-            const gammaBlocked = gammaAvailable && type !== 'gamma' && !isMicrowave;
-
-            // Microwave: disabled only when animating (not by microwaving itself since it's a toggle)
-            // Other reactions: disabled when microwaving, animating, not available, or gamma-blocked
-            const disabled = isMicrowave
-              ? !isAvailable || isAnimating || !currentIsotope
-              : !isAvailable || isAnimating || !currentIsotope || microwaving || gammaBlocked;
-
-            const description = reactionDescriptions.get(type);
-
-            if (!exists && !currentIsotope) return null;
-
-            const microwaveActiveStyle: React.CSSProperties = isMicrowave && microwaving
-              ? {
-                  border: '1px solid #f39c12',
-                  background: 'rgba(243, 156, 18, 0.25)',
-                  boxShadow: '0 0 12px rgba(243, 156, 18, 0.3)',
-                }
-              : {};
-
-            return (
-              <button
-                key={type}
-                onClick={() => !disabled && onReaction(type)}
-                disabled={disabled}
-                style={{
-                  ...buttonBase,
-                  ...(disabled && !(isMicrowave && microwaving) ? disabledStyle : activeStyle),
-                  ...microwaveActiveStyle,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-                title={description || type}
-              >
-                <span
-                  style={{
-                    fontSize: '16px',
-                    width: '24px',
-                    textAlign: 'center',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {isMicrowave ? <MicrowaveIcon /> : REACTION_ICONS[type]}
-                </span>
-                <span style={{ flexGrow: 1 }}>
-                  {isMicrowave
-                    ? (microwaving ? 'Stop Microwave' : 'Microwave')
-                    : type === 'neutron-collision'
-                      ? 'Neutron'
-                      : type === 'deuterium-collision'
-                        ? 'Deuterium'
-                        : type.charAt(0).toUpperCase() + type.slice(1)}
-                </span>
-                {exists && isAvailable && !isMicrowave && (
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: '#2ecc71',
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                {isMicrowave && microwaving && (
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: '#f39c12',
-                      flexShrink: 0,
-                      animation: 'pulse 0.5s ease-in-out infinite alternate',
-                    }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: '1px',
-          background: 'linear-gradient(to right, transparent, #444, transparent)',
-          margin: '12px 0',
-        }}
-      />
-
-      {/* Temperature slider */}
-      <div style={{ marginBottom: '16px' }}>
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#888',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            marginBottom: '8px',
-            fontFamily: 'var(--font-primary), sans-serif',
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div style={{
+          fontFamily: 'CustomRegular, sans-serif',
+          fontSize: '0.75rem',
+          color: '#888',
+          marginBottom: '6px',
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}>
           <span>Temperature</span>
-          <span style={{ color: tempColor, fontWeight: 'bold' }}>
-            {formatTemperature(temperature)}
-          </span>
+          <span style={{ color: tempColor }}>{formatTemperature(temperature)}</span>
         </div>
         <input
           type="range"
@@ -398,46 +302,49 @@ export default function AtomControls({
           onChange={handleSliderChange}
           style={{
             width: '100%',
-            height: '6px',
+            height: '4px',
             WebkitAppearance: 'none',
             appearance: 'none',
-            background: `linear-gradient(to right, #334, ${tempColor})`,
-            borderRadius: '3px',
+            background: `linear-gradient(to right, #333, ${tempColor})`,
+            borderRadius: '2px',
             outline: 'none',
             cursor: 'pointer',
           }}
         />
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: '10px',
-            color: '#555',
-            marginTop: '4px',
-            fontFamily: 'var(--font-primary), sans-serif',
-          }}
-        >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontFamily: 'CustomRegular, sans-serif',
+          fontSize: '0.6rem',
+          color: '#555',
+          marginTop: '4px',
+        }}>
           <span>0 K</span>
           <span>150 MK</span>
         </div>
       </div>
 
-      {/* Clear button */}
-      <button
-        onClick={onClear}
-        disabled={isAnimating || !currentIsotope}
-        style={{
-          ...buttonBase,
-          textAlign: 'center',
-          border: '1px solid #555',
-          color: '#aaa',
-          ...(isAnimating || !currentIsotope
-            ? { opacity: 0.3, cursor: 'not-allowed' }
-            : {}),
-        }}
-      >
-        Clear Atom
-      </button>
+      {/* Clear */}
+      {currentIsotope && (
+        <button
+          onClick={onClear}
+          disabled={isAnimating}
+          style={{
+            width: '100%',
+            padding: '0.6rem 1.25rem',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: '0.375rem',
+            background: 'none',
+            color: isAnimating ? '#555' : '#c8c4bc',
+            fontFamily: 'CustomRegular, sans-serif',
+            fontSize: '0.8rem',
+            cursor: isAnimating ? 'not-allowed' : 'pointer',
+            transition: 'opacity 0.2s ease',
+          }}
+        >
+          Clear
+        </button>
+      )}
     </div>
   );
 }
