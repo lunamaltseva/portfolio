@@ -10,6 +10,7 @@ interface NavItem {
   label: string;
   href?: string;
   dropdown?: NavLink[];
+  rightAligned?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -23,9 +24,17 @@ const navItems: NavItem[] = [
   },
   { label: 'Design', href: '/design' },
   { label: 'Programming', href: '/programming' },
+  {
+    label: 'Misc',
+    rightAligned: true,
+    dropdown: [
+      { label: 'Nuclear Decay Sim', href: '/decay' },
+      { label: 'Menstrual Clock', href: '/poetry' },
+    ],
+  },
 ];
 
-function Dropdown({ label, items, isMobile, onNavigate }: { label: string; items: NavLink[]; isMobile: boolean; onNavigate: () => void }) {
+function Dropdown({ label, items, isMobile, onNavigate, rightAligned }: { label: string; items: NavLink[]; isMobile: boolean; onNavigate: () => void; rightAligned?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (isMobile) {
@@ -55,13 +64,13 @@ function Dropdown({ label, items, isMobile, onNavigate }: { label: string; items
 
   return (
     <li
-      className="relative"
+      className={`relative${rightAligned ? ' nav-item-right' : ''}`}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
       <span className="nav-link dropdown-toggle">{label}</span>
       <ul
-        className={`dropdown-menu ${isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2.5'}`}
+        className={`dropdown-menu${rightAligned ? ' dropdown-menu-right' : ''} ${isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2.5'}`}
       >
         {items.map((item) => (
           <li key={item.href}>
@@ -132,6 +141,7 @@ export default function Navbar() {
                 items={item.dropdown}
                 isMobile={isMobile}
                 onNavigate={() => setMenuOpen(false)}
+                rightAligned={item.rightAligned}
               />
             ) : (
               <li key={item.href} className="nav-item">

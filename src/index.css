@@ -182,6 +182,15 @@ a:hover {
   transition: all var(--transition-medium);
 }
 
+.nav-item-right {
+  margin-left: auto;
+}
+
+.dropdown-menu-right {
+  left: auto;
+  right: 0;
+}
+
 .dropdown-item {
   color: var(--color-white);
   padding: 0.6rem 1.25rem;
