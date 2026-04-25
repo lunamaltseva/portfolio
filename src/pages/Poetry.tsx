@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // --- Data ---
 
@@ -41,30 +42,64 @@ const CYCLE_DATA: CycleDay[] = [
   { day: 28, phase: 'Luteal',     lh: 4.66,  estrogen: 121.24, progesterone: 7.27  },
 ];
 
-// Normalise each hormone to [0, 1]
-const E_MIN = Math.min(...CYCLE_DATA.map(d => d.estrogen));
-const E_MAX = Math.max(...CYCLE_DATA.map(d => d.estrogen));
-const P_MIN = Math.min(...CYCLE_DATA.map(d => d.progesterone));
-const P_MAX = Math.max(...CYCLE_DATA.map(d => d.progesterone));
-const L_MIN = Math.min(...CYCLE_DATA.map(d => d.lh));
-const L_MAX = Math.max(...CYCLE_DATA.map(d => d.lh));
+// Min-max normalisation — used for poem/phrase selection so full range maps to all 14 lines
+const E_MIN  = Math.min(...CYCLE_DATA.map(d => d.estrogen));
+const E_MAX  = Math.max(...CYCLE_DATA.map(d => d.estrogen));
+const P_MIN  = Math.min(...CYCLE_DATA.map(d => d.progesterone));
+const P_MAX  = Math.max(...CYCLE_DATA.map(d => d.progesterone));
+const LH_MIN = Math.min(...CYCLE_DATA.map(d => d.lh));
+const LH_MAX = Math.max(...CYCLE_DATA.map(d => d.lh));
 
-function norm(v: number, min: number, max: number) {
-  return (v - min) / (max - min);
+// True-zero normalisation — used for graph display so 0 is true 0
+const E_ABSMAX  = E_MAX;
+const P_ABSMAX  = P_MAX;
+const LH_ABSMAX = LH_MAX;
+
+function normMinMax(v: number, min: number, max: number) { return (v - min) / (max - min); }
+function normTrueZero(v: number, max: number) { return v / max; }
+
+// Catmull-Rom arrays — two sets, one per normalisation
+const E_RAW_POEM  = CYCLE_DATA.map(d => normMinMax(d.estrogen,     E_MIN,  E_MAX));
+const P_RAW_POEM  = CYCLE_DATA.map(d => normMinMax(d.progesterone, P_MIN,  P_MAX));
+const LH_RAW_POEM = CYCLE_DATA.map(d => normMinMax(d.lh,           LH_MIN, LH_MAX));
+
+const E_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.estrogen,     E_ABSMAX));
+const P_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.progesterone, P_ABSMAX));
+const LH_RAW_GRAPH = CYCLE_DATA.map(d => normTrueZero(d.lh,           LH_ABSMAX));
+
+// Catmull-Rom spline (periodic)
+function catmullRom(arr: number[], t: number): number {
+  const n = arr.length;
+  const cycled = ((t % n) + n) % n;
+  const i1 = Math.floor(cycled);
+  const f  = cycled - i1;
+  const p0 = arr[((i1 - 1) + n) % n];
+  const p1 = arr[i1];
+  const p2 = arr[(i1 + 1) % n];
+  const p3 = arr[(i1 + 2) % n];
+  return 0.5 * (
+    (2 * p1) +
+    (-p0 + p2) * f +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * f * f * f
+  );
 }
 
-// Interpolate between two cycle days at a fractional day position (0-indexed, 0=day1)
+// For poem selection — min-max normalised, full [0,1] range
 function interpolate(dayFrac: number): { e: number; p: number; lh: number } {
-  const total = CYCLE_DATA.length; // 28
-  const cycled = ((dayFrac % total) + total) % total;
-  const i = Math.floor(cycled);
-  const t = cycled - i;
-  const a = CYCLE_DATA[i];
-  const b = CYCLE_DATA[(i + 1) % total];
   return {
-    e:   norm(a.estrogen     + t * (b.estrogen     - a.estrogen),     E_MIN, E_MAX),
-    p:   norm(a.progesterone + t * (b.progesterone - a.progesterone), P_MIN, P_MAX),
-    lh:  norm(a.lh           + t * (b.lh           - a.lh),           L_MIN, L_MAX),
+    e:  Math.max(0, Math.min(1, catmullRom(E_RAW_POEM,  dayFrac))),
+    p:  Math.max(0, Math.min(1, catmullRom(P_RAW_POEM,  dayFrac))),
+    lh: Math.max(0, Math.min(1, catmullRom(LH_RAW_POEM, dayFrac))),
+  };
+}
+
+// For graph display — true-zero normalised, no upper clamp so spline peak isn't flattened
+function interpolateGraph(dayFrac: number): { e: number; p: number; lh: number } {
+  return {
+    e:  Math.max(0, catmullRom(E_RAW_GRAPH,  dayFrac)),
+    p:  Math.max(0, catmullRom(P_RAW_GRAPH,  dayFrac)),
+    lh: Math.max(0, catmullRom(LH_RAW_GRAPH, dayFrac)),
   };
 }
 
@@ -89,428 +124,486 @@ const POEMS = [
 
 const N = POEMS.length; // 14
 
-// Map a [0,1] hormone value to a line index (0-13)
-function hormoneLine(v: number) {
-  return Math.min(N - 1, Math.floor(v * N));
+// highest hormone (1.0) → index 0 (poem 1); lowest (0.0) → index 13 (poem 14)
+function hormoneLine(v: number): number {
+  return N - 1 - Math.min(N - 1, Math.floor(v * N));
 }
 
-// --- Sentence phrases ---
+// --- Sentence phrases (all verified substrings of their poem line) ---
 
-// Estrogen selects noun phrase (14 options, two sets so E and LH don't clash)
-const E_NOUNS = [
-  'the pale morning',
-  'a red wheel barrow',
-  'the tide at ebb',
-  'an unmarked door',
-  'the cold October',
-  'a broken compass',
-  'the slow fever',
-  'an empty theatre',
-  'the glass of water',
-  'a long corridor',
-  'the dying ember',
-  'a silver mirror',
-  'the open wound',
-  'a borrowed name',
+const E_NPS: string[] = [
+  'such a form',                      // 0
+  'истину',                           // 1
+  'the old lie',                      // 2
+  'both your houses',                 // 3
+  'such a jocund company',            // 4
+  'the state of Denmark',             // 5
+  'the tea and cakes and ices',       // 6
+  'the marriage of true minds',       // 7
+  'the kisses of his mouth',          // 8
+  'the gait',                         // 9
+  'a thousands',                      // 10
+  'not to yield',                     // 11
+  'coffee spoons',                    // 12
+  'that good night',                  // 13
 ];
 
-const LH_NOUNS = [
-  'without you',
-  'beneath the ice',
-  'against the current',
-  'in the wrong season',
-  'before the ending',
-  'across the distance',
-  'into the silence',
-  'beside the river',
-  'through the dark glass',
-  'along the edge',
-  'after the fire',
-  'within the hour',
-  'beyond the window',
-  'among the ruins',
+const LH_NPS: string[] = [
+  'Grecian goldsmiths',               // 0
+  'на выдохе',                        // 1
+  'Dulce et decorum est',             // 2
+  'a plague',                         // 3
+  'a poet',                           // 4
+  'is rotten',                        // 5
+  'after the tea and cakes and ices', // 6
+  'impediments',                      // 7
+  'love is better than wine',         // 8
+  'how strait the gait',              // 9
+  'two words',                        // 10
+  'to seek, to find',                 // 11
+  'my life',                          // 12
+  'good night',                       // 13
 ];
 
-// Progesterone selects adjective phrase (14 options)
-const P_ADJS = [
-  'waits, quietly,',
-  'falls apart',
-  'burns slowly',
-  'holds its breath',
-  'turns to salt',
-  'keeps no record',
-  'forgets its name',
-  'casts no shadow',
-  'leaves no trace',
-  'refuses to end',
-  'carries no weight',
-  'does not ask',
-  'knows too much',
-  'begins again',
+const P_VERBS: string[] = [
+  'make',                             // 0
+  'вбираем',                          // 1
+  'Dulce et decorum est',             // 2
+  'plague',                           // 3
+  'could not but be gay',             // 4
+  'is rotten',                        // 5
+  'should I',                         // 6
+  'admit',                            // 7
+  'kiss me',                          // 8
+  'matters not',                      // 9
+  'tell me',                          // 10
+  'strive',                           // 11
+  'measured out',                     // 12
+  'go gentle',                        // 13
 ];
 
 function buildSentence(eIdx: number, pIdx: number, lhIdx: number): string {
-  // If E and LH would land on the same bucket level, offset LH by half a bucket
-  let lhI = lhIdx;
-  if (eIdx === lhIdx) {
-    lhI = (lhIdx + Math.ceil(N / 2)) % N;
-  }
-  return `${E_NOUNS[eIdx]} ${P_ADJS[pIdx]} ${LH_NOUNS[lhI]}`;
+  return `${E_NPS[eIdx]} ${P_VERBS[pIdx]} ${LH_NPS[lhIdx]}`;
 }
 
-// --- Phases layout for lower x-axis ---
+// Highlight verified substrings within a poem line
+function renderLine(
+  text: string,
+  highlights: { phrase: string; color: string }[],
+): React.ReactNode {
+  type Span = { start: number; end: number; color: string };
+  const spans: Span[] = [];
+  for (const { phrase, color } of highlights) {
+    const idx = text.toLowerCase().indexOf(phrase.toLowerCase());
+    if (idx === -1) continue;
+    spans.push({ start: idx, end: idx + phrase.length, color });
+  }
+  if (spans.length === 0) return text;
+  spans.sort((a, b) => a.start - b.start);
+  const merged: Span[] = [];
+  for (const s of spans) {
+    if (merged.length && s.start < merged[merged.length - 1].end) continue;
+    merged.push(s);
+  }
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const { start, end, color } of merged) {
+    if (start > cursor) parts.push(text.slice(cursor, start));
+    parts.push(<span key={start} style={{ color }}>{text.slice(start, end)}</span>);
+    cursor = end;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return parts;
+}
+
+// --- Phases ---
 
 const PHASES = [
-  { name: 'Menstrual',  start: 1, end: 5  },
-  { name: 'Follicular', start: 6, end: 13 },
+  { name: 'Menstrual',  start: 1,  end: 5  },
+  { name: 'Follicular', start: 6,  end: 13 },
   { name: 'Fertility',  start: 14, end: 16 },
   { name: 'Luteal',     start: 17, end: 28 },
 ];
 
-// --- Graph component ---
+// --- Colors ---
 
-const GRAPH_W = 520;
-const GRAPH_H = 220;
-const PAD_L = 16;
-const PAD_R = 16;
-const PAD_TOP = 32;    // upper x-axis
-const PAD_BOT = 36;    // lower x-axis (phase labels)
-const INNER_W = GRAPH_W - PAD_L - PAD_R;
-const INNER_H = GRAPH_H - PAD_TOP - PAD_BOT;
+const COLOR_E  = '#b06090';
+const COLOR_P  = '#c8a800';
+const COLOR_LH = '#3a72c8';
 
-// How many days to display at once in the viewport
-const VIEW_DAYS = 14;
+// --- Graph layout ---
 
-function dayToX(day: number, offset: number) {
-  // day is 1-based fractional position in the cycle; offset is the scroll position in days
-  const rel = day - offset;
-  return PAD_L + (rel / VIEW_DAYS) * INNER_W;
-}
+const PAD_L     = 2;
+const PAD_R     = 0;
+const PAD_TOP   = 12;  // headroom so Catmull-Rom overshoot isn't clipped
+const PAD_PHASE = 18;
+const PAD_DAYS  = 18;
+const PAD_BOT   = PAD_PHASE + PAD_DAYS;
+const VIEW_DAYS = 28;
 
-function valToY(v: number) {
-  // v in [0,1]
-  return PAD_TOP + INNER_H - v * INNER_H;
-}
+// Scale factors applied to P and LH on the graph so estrogen is dominant
+const GRAPH_SCALE_P  = 0.6
+const GRAPH_SCALE_LH = 0.7;
 
-function buildPath(
-  offsetDay: number,
-  key: 'e' | 'p' | 'lh',
-): string {
-  // Build a smooth path covering a bit extra on each side
-  const startDay = offsetDay - 1;
-  const endDay   = offsetDay + VIEW_DAYS + 1;
-  const steps    = Math.ceil((endDay - startDay) * 4);
-  let d = '';
-  for (let s = 0; s <= steps; s++) {
-    const dayFrac = startDay + (s / steps) * (endDay - startDay);
-    const vals = interpolate(dayFrac - 1); // dayFrac is 1-based, interpolate is 0-indexed
-    const v = vals[key];
-    const x = dayToX(dayFrac, offsetDay);
-    const y = valToY(v);
-    d += s === 0 ? `M ${x},${y}` : ` L ${x},${y}`;
+function makeHelpers(innerW: number, innerH: number) {
+  function dayToX(day: number, offset: number) {
+    return PAD_L + ((day - offset) / VIEW_DAYS) * innerW;
   }
-  return d;
+  function valToY(v: number) {
+    return PAD_TOP + innerH - v * innerH;
+  }
+  const GRAPH_SCALE: Record<'e' | 'p' | 'lh', number> = {
+    e: 0.82,
+    p: GRAPH_SCALE_P,
+    lh: GRAPH_SCALE_LH,
+  };
+
+  // dayFrac passed to interpolateGraph is 0-indexed; offsetDay is 1-based
+  function buildPath(offsetDay: number, key: 'e' | 'p' | 'lh'): string {
+    const startDay = offsetDay - 0.5;
+    const endDay   = offsetDay + VIEW_DAYS + 0.5;
+    const steps    = Math.ceil((endDay - startDay) * 12);
+    let d = '';
+    for (let s = 0; s <= steps; s++) {
+      const df   = startDay + (s / steps) * (endDay - startDay);
+      const vals = interpolateGraph(df - 1);
+      const x    = dayToX(df, offsetDay);
+      const y    = valToY(vals[key] * GRAPH_SCALE[key]);
+      d += s === 0 ? `M ${x.toFixed(2)},${y.toFixed(2)}` : ` L ${x.toFixed(2)},${y.toFixed(2)}`;
+    }
+    return d;
+  }
+  return { dayToX, buildPath };
 }
+
+// --- SVG icon buttons ---
+
+function IconBtn({
+  onClick, disabled, children, title,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <button onClick={onClick} disabled={disabled} title={title} style={{
+      background: 'none', border: '1px solid #bbb', borderRadius: '3px',
+      padding: '4px 8px', cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.35 : 1, display: 'flex',
+      alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+    }}>
+      {children}
+    </button>
+  );
+}
+
+function SlowerIcon() {
+  return <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+    <polygon points="8,1 1,7 8,13" fill="#444" />
+    <polygon points="15,1 8,7 15,13" fill="#444" />
+  </svg>;
+}
+function FasterIcon() {
+  return <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+    <polygon points="1,1 8,7 1,13" fill="#444" />
+    <polygon points="8,1 15,7 8,13" fill="#444" />
+  </svg>;
+}
+function PlayIcon() {
+  return <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+    <polygon points="1,1 11,7 1,13" fill="#444" />
+  </svg>;
+}
+function PauseIcon() {
+  return <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+    <rect x="1" y="1" width="4" height="12" fill="#444" />
+    <rect x="7" y="1" width="4" height="12" fill="#444" />
+  </svg>;
+}
+
+// --- Graph ---
 
 interface GraphProps {
-  offsetDay: number; // fractional, 1-based, leftmost visible day
-  currentDay: number;
+  offsetDay: number;
+  width: number;
+  height: number;
+  onDragOffset: (v: number) => void;
 }
 
-function CycleGraph({ offsetDay, currentDay }: GraphProps) {
-  const pathE   = buildPath(offsetDay, 'e');
-  const pathP   = buildPath(offsetDay, 'p');
-  const pathLH  = buildPath(offsetDay, 'lh');
+function CycleGraph({ offsetDay, width, height, onDragOffset }: GraphProps) {
+  const innerW = width - PAD_L - PAD_R;
+  const innerH = height - PAD_TOP - PAD_BOT;
+  const { dayToX, buildPath } = makeHelpers(innerW, innerH);
 
-  // Current-day vertical line
-  const curX = dayToX(currentDay, offsetDay);
+  const pathE  = buildPath(offsetDay, 'e');
+  const pathP  = buildPath(offsetDay, 'p');
+  const pathLH = buildPath(offsetDay, 'lh');
 
-  // Upper x-axis tick days
-  const upperTicks = [1, 14, 28];
+  // Compute rep range dynamically so labels never run out regardless of offsetDay
+  const repMin = Math.floor((offsetDay - 1) / 28) - 1;
+  const repMax = Math.ceil((offsetDay + VIEW_DAYS) / 28) + 1;
 
-  // Render phase spans on lower axis
-  // We need to show whichever cycle repetition is visible
-  const lowerAxisItems: { name: string; x1: number; x2: number }[] = [];
-  // We may show multiple cycle repetitions
-  for (let rep = -1; rep <= 3; rep++) {
+  const ovulationXs: number[] = [];
+  for (let rep = repMin; rep <= repMax; rep++) {
+    const x = dayToX(14 + rep * 28, offsetDay);
+    if (x >= PAD_L && x <= PAD_L + innerW) ovulationXs.push(x);
+  }
+
+  const phaseItems: { name: string; cx: number; x1: number; clipX: number; clipW: number }[] = [];
+  for (let rep = repMin; rep <= repMax; rep++) {
     PHASES.forEach(ph => {
-      const absStart = ph.start + rep * 28;
-      const absEnd   = ph.end   + rep * 28;
-      const x1 = dayToX(absStart, offsetDay);
-      const x2 = dayToX(absEnd + 1, offsetDay);
-      if (x2 > PAD_L && x1 < PAD_L + INNER_W) {
-        lowerAxisItems.push({ name: ph.name, x1, x2 });
+      const x1 = dayToX(ph.start + rep * 28, offsetDay);
+      const x2 = dayToX(ph.end + 1 + rep * 28, offsetDay);
+      if (x2 > PAD_L && x1 < PAD_L + innerW) {
+        const clipX = Math.max(x1, PAD_L);
+        const clipW = Math.min(x2, PAD_L + innerW) - clipX;
+        phaseItems.push({
+          name: ph.name,
+          cx: (clipX + clipX + clipW) / 2,
+          x1: clipX,
+          clipX,
+          clipW,
+        });
       }
     });
   }
 
-  // Upper tick marks: find visible ticks across repetitions
-  const upperTickItems: { label: number; x: number }[] = [];
-  for (let rep = -1; rep <= 3; rep++) {
-    upperTicks.forEach(d => {
-      const absD = d + rep * 28;
-      const x = dayToX(absD, offsetDay);
-      if (x >= PAD_L - 2 && x <= PAD_L + INNER_W + 2) {
-        upperTickItems.push({ label: d, x });
-      }
+  const dayTickItems: { label: number; x: number }[] = [];
+  for (let rep = repMin; rep <= repMax; rep++) {
+    [1, 14, 28].forEach(d => {
+      const x = dayToX(d + rep * 28, offsetDay);
+      if (x >= PAD_L && x <= PAD_L + innerW) dayTickItems.push({ label: d, x });
     });
   }
+
+  const dragRef  = useRef<{ startX: number; startOffset: number } | null>(null);
+  const touchRef = useRef<{ startX: number; startOffset: number } | null>(null);
+
+  function onMouseDown(e: React.MouseEvent) {
+    dragRef.current = { startX: e.clientX, startOffset: offsetDay };
+    e.preventDefault();
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!dragRef.current) return;
+    onDragOffset(dragRef.current.startOffset - ((e.clientX - dragRef.current.startX) / innerW) * VIEW_DAYS);
+  }
+  function onMouseUp() { dragRef.current = null; }
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchRef.current = { startX: e.touches[0].clientX, startOffset: offsetDay };
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!touchRef.current) return;
+    onDragOffset(touchRef.current.startOffset - ((e.touches[0].clientX - touchRef.current.startX) / innerW) * VIEW_DAYS);
+  }
+  function onTouchEnd() { touchRef.current = null; }
 
   return (
-    <svg
-      width={GRAPH_W}
-      height={GRAPH_H}
-      style={{ display: 'block', fontFamily: 'monospace' }}
+    <svg width={width} height={height}
+      style={{ display: 'block', fontFamily: 'monospace', cursor: 'grab', userSelect: 'none' }}
+      onMouseDown={onMouseDown} onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
     >
-      {/* Background */}
-      <rect x={PAD_L} y={PAD_TOP} width={INNER_W} height={INNER_H} fill="#f8f8f8" />
+      <clipPath id="graph-clip">
+        <rect x={PAD_L} y={PAD_TOP} width={innerW} height={innerH} />
+      </clipPath>
 
-      {/* Upper x-axis */}
-      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L + INNER_W} y2={PAD_TOP} stroke="#ccc" strokeWidth={1} />
-      {upperTickItems.map(({ label, x }, i) => (
-        <g key={i}>
-          <line x1={x} y1={PAD_TOP - 4} x2={x} y2={PAD_TOP} stroke="#888" strokeWidth={1} />
-          <text x={x} y={PAD_TOP - 7} textAnchor="middle" fontSize={10} fill="#555">{label}</text>
+      <rect x={PAD_L} y={PAD_TOP} width={innerW} height={innerH} fill="#ffffff" />
+
+      {ovulationXs.map((x, i) => (
+        <g key={i} clipPath="url(#graph-clip)">
+          <line x1={x} y1={PAD_TOP} x2={x} y2={PAD_TOP + innerH} stroke="#ddd" strokeWidth={1} strokeDasharray="4,3" />
+          <text x={x + 3} y={PAD_TOP + 11} fontSize={8} fill="#bbb">ovulation</text>
         </g>
       ))}
 
-      {/* Horizontal grid lines */}
-      {[0.25, 0.5, 0.75].map(v => (
-        <line
-          key={v}
-          x1={PAD_L} y1={valToY(v)}
-          x2={PAD_L + INNER_W} y2={valToY(v)}
-          stroke="#e8e8e8" strokeWidth={1}
-        />
+      <path d={pathE}  fill="none" stroke={COLOR_E}  strokeWidth={1.5} clipPath="url(#graph-clip)" />
+      <path d={pathP}  fill="none" stroke={COLOR_P}  strokeWidth={1.5} clipPath="url(#graph-clip)" />
+      <path d={pathLH} fill="none" stroke={COLOR_LH} strokeWidth={1.5} clipPath="url(#graph-clip)" />
+
+      {/* Reading line */}
+      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L} y2={PAD_TOP + innerH} stroke="#aaa" strokeWidth={1} />
+
+      {/* Bottom + left borders */}
+      <line x1={PAD_L} y1={PAD_TOP + innerH} x2={PAD_L + innerW} y2={PAD_TOP + innerH} stroke="#ccc" strokeWidth={1} />
+      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L} y2={PAD_TOP + innerH} stroke="#ccc" strokeWidth={1} />
+
+      {phaseItems.map(({ name, cx, x1, clipX, clipW }, i) => (
+        <g key={i}>
+          <clipPath id={`phase-clip-${i}`}>
+            <rect x={clipX} y={PAD_TOP + innerH} width={clipW} height={PAD_PHASE} />
+          </clipPath>
+          <line x1={x1} y1={PAD_TOP + innerH} x2={x1} y2={PAD_TOP + innerH + PAD_PHASE} stroke="#e0e0e0" strokeWidth={1} />
+          <text
+            x={cx} y={PAD_TOP + innerH + PAD_PHASE - 4}
+            textAnchor="middle" fontSize={8} fill="#999"
+            clipPath={`url(#phase-clip-${i})`}
+          >{name}</text>
+        </g>
       ))}
 
-      {/* Clip path */}
-      <clipPath id="graph-clip">
-        <rect x={PAD_L} y={PAD_TOP} width={INNER_W} height={INNER_H} />
-      </clipPath>
+      {dayTickItems.map(({ label, x }, i) => (
+        <text key={i} x={x} y={PAD_TOP + innerH + PAD_PHASE + PAD_DAYS - 4} textAnchor="middle" fontSize={9} fill="#777">
+          {label}
+        </text>
+      ))}
 
-      {/* Hormone lines */}
-      <path d={pathE}  fill="none" stroke="#c0392b" strokeWidth={1.5} clipPath="url(#graph-clip)" />
-      <path d={pathP}  fill="none" stroke="#2980b9" strokeWidth={1.5} clipPath="url(#graph-clip)" />
-      <path d={pathLH} fill="none" stroke="#27ae60" strokeWidth={1.5} clipPath="url(#graph-clip)" />
-
-      {/* Current day line */}
-      {curX >= PAD_L && curX <= PAD_L + INNER_W && (
-        <line x1={curX} y1={PAD_TOP} x2={curX} y2={PAD_TOP + INNER_H} stroke="#333" strokeWidth={1} strokeDasharray="3,3" />
-      )}
-
-      {/* Border */}
-      <rect x={PAD_L} y={PAD_TOP} width={INNER_W} height={INNER_H} fill="none" stroke="#ccc" strokeWidth={1} />
-
-      {/* Lower x-axis: phase bands */}
-      <line x1={PAD_L} y1={PAD_TOP + INNER_H} x2={PAD_L + INNER_W} y2={PAD_TOP + INNER_H} stroke="#ccc" strokeWidth={1} />
-      {lowerAxisItems.map(({ name, x1, x2 }, i) => {
-        const cx = (Math.max(x1, PAD_L) + Math.min(x2, PAD_L + INNER_W)) / 2;
-        const clampedX1 = Math.max(x1, PAD_L);
-        return (
-          <g key={i}>
-            <line x1={clampedX1} y1={PAD_TOP + INNER_H} x2={clampedX1} y2={PAD_TOP + INNER_H + 4} stroke="#aaa" strokeWidth={1} />
-            <text x={cx} y={PAD_TOP + INNER_H + 14} textAnchor="middle" fontSize={9} fill="#555">
-              {name}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Legend */}
-      <g transform={`translate(${PAD_L + 4}, ${PAD_TOP + 6})`}>
-        <line x1={0} y1={0} x2={14} y2={0} stroke="#c0392b" strokeWidth={1.5} />
-        <text x={17} y={4} fontSize={9} fill="#c0392b">E</text>
-        <line x1={28} y1={0} x2={42} y2={0} stroke="#2980b9" strokeWidth={1.5} />
-        <text x={45} y={4} fontSize={9} fill="#2980b9">P</text>
-        <line x1={56} y1={0} x2={70} y2={0} stroke="#27ae60" strokeWidth={1.5} />
-        <text x={73} y={4} fontSize={9} fill="#27ae60">L</text>
+      <g transform={`translate(${PAD_L + innerW - 6}, 14)`}>
+        <line x1={-96} y1={0}  x2={-82} y2={0}  stroke={COLOR_E}  strokeWidth={1.5} />
+        <text x={-79} y={4}   fontSize={9} fill={COLOR_E}  textAnchor="start">Estrogen</text>
+        <line x1={-96} y1={14} x2={-82} y2={14} stroke={COLOR_P}  strokeWidth={1.5} />
+        <text x={-79} y={18}  fontSize={9} fill={COLOR_P}  textAnchor="start">Progesterone</text>
+        <line x1={-96} y1={28} x2={-82} y2={28} stroke={COLOR_LH} strokeWidth={1.5} />
+        <text x={-79} y={32}  fontSize={9} fill={COLOR_LH} textAnchor="start">LH</text>
       </g>
     </svg>
   );
 }
 
-// --- Main page ---
-
-const DEFAULT_SPEED = 5; // seconds per cycle day
+// --- Speed steps: index 0 = fastest, last = slowest ---
+const SPEED_STEPS = [0.2, 0.5, 1, 2, 5, 10, 20];
+const DEFAULT_SPEED_IDX = 4; // 5 s/day
 
 export default function Poetry() {
-  // Fractional cycle day, 1-based. Scrolls forward.
-  const [dayFrac, setDayFrac] = useState(1.0);
-  const [speed, setSpeed]     = useState(DEFAULT_SPEED); // seconds per day
-  const [paused, setPaused]   = useState(false);
+  const isMobile = useIsMobile();
 
-  const lastTimestampRef = useRef<number | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const [dayFrac,    setDayFrac]    = useState(1.0);
+  const [speedIdx,   setSpeedIdx]   = useState(DEFAULT_SPEED_IDX);
+  const [paused,     setPaused]     = useState(false);
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+
+  const speed = SPEED_STEPS[speedIdx];
+
+  const lastTsRef = useRef<number | null>(null);
+  const rafRef    = useRef<number | null>(null);
 
   const tick = useCallback((ts: number) => {
-    if (lastTimestampRef.current !== null) {
-      const elapsed = (ts - lastTimestampRef.current) / 1000; // seconds
-      const daysElapsed = elapsed / speed;
-      setDayFrac(d => d + daysElapsed);
+    if (lastTsRef.current !== null) {
+      setDayFrac(d => d + (ts - lastTsRef.current!) / 1000 / speed);
     }
-    lastTimestampRef.current = ts;
+    lastTsRef.current = ts;
     rafRef.current = requestAnimationFrame(tick);
   }, [speed]);
 
   useEffect(() => {
     if (paused) {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
-      lastTimestampRef.current = null;
+      lastTsRef.current = null;
       return;
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      lastTimestampRef.current = null;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      lastTsRef.current = null;
     };
   }, [paused, tick]);
 
-  // Hormone levels at current day
-  const vals = interpolate(dayFrac - 1);
-  const eIdx   = hormoneLine(vals.e);
-  const pIdx   = hormoneLine(vals.p);
-  const lhIdx  = hormoneLine(vals.lh);
+  // When unpausing, if the user has dragged, absorb the drag offset into dayFrac
+  // so playback continues from where the graph was left
+  const prevPaused = useRef(paused);
+  useEffect(() => {
+    if (prevPaused.current && !paused && dragOffset !== null) {
+      setDayFrac(dragOffset);
+      setDragOffset(null);
+    }
+    prevPaused.current = paused;
+  }, [paused, dragOffset]);
+
+  const offsetDay = dragOffset !== null ? dragOffset : dayFrac;
+
+  const vals     = interpolate(offsetDay - 1);
+  const eIdx     = hormoneLine(vals.e);
+  const pIdx     = hormoneLine(vals.p);
+  const lhIdx    = hormoneLine(vals.lh);
   const sentence = buildSentence(eIdx, pIdx, lhIdx);
 
-  // Graph offset: keep current day 2/3 of the way through the viewport
-  const offsetDay = dayFrac - VIEW_DAYS * (2 / 3);
+  // Measure poem lines height (excludes sentence) to match graph height on desktop
+  const poemLinesRef = useRef<HTMLDivElement>(null);
+  const [poemHeight, setPoemHeight] = useState(500);
+  useEffect(() => {
+    const el = poemLinesRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => setPoemHeight(entries[0].contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const fontBase = 'Georgia, serif';
+  // Measure graph column width
+  const graphColRef = useRef<HTMLDivElement>(null);
+  const [graphW, setGraphW] = useState(600);
+  useEffect(() => {
+    const el = graphColRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => setGraphW(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const MARKER_COLORS = { E: '#c0392b', P: '#2980b9', L: '#27ae60' };
+  const graphH = isMobile ? 220 : poemHeight;
+  const font   = 'Georgia, serif';
+  const fontSize = isMobile ? '1rem' : '1.25rem';
+  const pad    = isMobile ? '1.5rem 1rem' : '3rem 2.5rem';
 
   return (
-    <div style={{
-      backgroundColor: '#ffffff',
-      minHeight: '100vh',
-      padding: '3rem 2.5rem',
-      boxSizing: 'border-box',
-    }}>
-      {/* Title */}
-      <h1 style={{
-        fontFamily: fontBase,
-        fontSize: '1.6rem',
-        fontWeight: 400,
-        color: '#000',
-        marginBottom: '2rem',
-      }}>
-        Poem clock by D&amp;L
+    <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: pad, boxSizing: 'border-box' }}>
+      <h1 style={{ fontFamily: font, fontSize: isMobile ? '1.2rem' : '1.6rem', fontWeight: 400, color: '#000', marginBottom: isMobile ? '1.25rem' : '2rem' }}>
+        MClock by Daria &amp; Luna
       </h1>
 
-      {/* Main two-column layout */}
       <div style={{
         display: 'flex',
-        gap: '3rem',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '1.5rem' : '3rem',
         alignItems: 'flex-start',
       }}>
-        {/* Left: poems */}
-        <div style={{ flex: '0 0 auto', minWidth: 0 }}>
-          {POEMS.map((line, i) => {
-            const markers: string[] = [];
-            if (i === eIdx)  markers.push('E');
-            if (i === pIdx)  markers.push('P');
-            if (i === lhIdx) markers.push('L');
-            const isActive = markers.length > 0;
+        {/* Poems */}
+        <div style={{ flex: '0 0 auto', minWidth: 0, width: isMobile ? '100%' : undefined }}>
+          <div ref={poemLinesRef}>
+            {POEMS.map((line, i) => {
+              const isActive = i === eIdx || i === pIdx || i === lhIdx;
+              const highlights: { phrase: string; color: string }[] = [];
+              if (i === eIdx)  highlights.push({ phrase: E_NPS[i],   color: COLOR_E  });
+              if (i === pIdx)  highlights.push({ phrase: P_VERBS[i], color: COLOR_P  });
+              if (i === lhIdx) highlights.push({ phrase: LH_NPS[i],  color: COLOR_LH });
+              return (
+                <div key={i} style={{ marginBottom: isMobile ? '0.35rem' : '0.55rem', opacity: isActive ? 1 : 0.22 }}>
+                  <span style={{ fontFamily: font, fontSize, color: '#111', lineHeight: 1.65 }}>
+                    {renderLine(line, highlights)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-            return (
-              <div key={i} style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '0.75rem',
-                marginBottom: '0.55rem',
-                opacity: isActive ? 1 : 0.22,
-                transition: 'opacity 0.4s ease',
-              }}>
-                {/* Markers column — fixed width so text aligns */}
-                <span style={{
-                  width: '2.2rem',
-                  flexShrink: 0,
-                  textAlign: 'right',
-                  fontFamily: 'monospace',
-                  fontSize: '0.75rem',
-                  lineHeight: 1.6,
-                  letterSpacing: '0.05em',
-                }}>
-                  {markers.map(m => (
-                    <span key={m} style={{ color: MARKER_COLORS[m as keyof typeof MARKER_COLORS] }}>{m}</span>
-                  ))}
-                </span>
-                <span style={{
-                  fontFamily: fontBase,
-                  fontSize: '1.25rem',
-                  color: '#111',
-                  lineHeight: 1.65,
-                }}>
-                  {line}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Composed sentence */}
           <div style={{
-            marginTop: '1.75rem',
-            fontFamily: fontBase,
-            fontSize: '1.05rem',
-            color: '#333',
-            fontStyle: 'italic',
-            paddingLeft: '3rem',
-            maxWidth: '480px',
+            marginTop: isMobile ? '1rem' : '1.75rem',
+            fontFamily: font,
+            fontSize: isMobile ? '0.875rem' : '1rem',
+            color: '#444', fontStyle: 'italic',
+            paddingLeft: isMobile ? '0' : '3rem',
+            maxWidth: '520px', lineHeight: 1.7,
           }}>
             {sentence}
           </div>
         </div>
 
-        {/* Right: graph + controls */}
-        <div style={{ flex: '0 0 auto' }}>
-          <CycleGraph offsetDay={offsetDay} currentDay={dayFrac} />
+        {/* Graph + controls */}
+        <div ref={graphColRef} style={{ flex: isMobile ? '0 0 auto' : '1 1 0', minWidth: 0, width: isMobile ? '100%' : undefined }}>
+          <CycleGraph offsetDay={offsetDay} width={graphW} height={graphH} onDragOffset={setDragOffset} />
 
-          {/* Controls */}
-          <div style={{
-            marginTop: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            fontFamily: 'monospace',
-            fontSize: '0.8rem',
-            color: '#555',
-          }}>
-            <button
-              onClick={() => setPaused(p => !p)}
-              style={{
-                fontFamily: 'monospace',
-                fontSize: '0.8rem',
-                background: 'none',
-                border: '1px solid #aaa',
-                padding: '0.2rem 0.6rem',
-                cursor: 'pointer',
-                color: '#333',
-              }}
-            >
-              {paused ? 'play' : 'pause'}
-            </button>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              speed
-              <input
-                type="range"
-                min={0.2}
-                max={20}
-                step={0.1}
-                value={speed}
-                onChange={e => setSpeed(parseFloat(e.target.value))}
-                style={{ width: '100px' }}
-              />
-              <span style={{ minWidth: '4em' }}>
-                {speed.toFixed(1)}s/day
-              </span>
-            </label>
-
-            <span style={{ color: '#aaa' }}>
-              day {((((dayFrac - 1) % 28) + 28) % 28 + 1).toFixed(1)}
-            </span>
+          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <IconBtn onClick={() => setSpeedIdx(i => Math.min(SPEED_STEPS.length - 1, i + 1))} disabled={speedIdx >= SPEED_STEPS.length - 1} title="Slower">
+              <SlowerIcon />
+            </IconBtn>
+            <IconBtn onClick={() => setPaused(p => !p)} title={paused ? 'Play' : 'Pause'}>
+              {paused ? <PlayIcon /> : <PauseIcon />}
+            </IconBtn>
+            <IconBtn onClick={() => setSpeedIdx(i => Math.max(0, i - 1))} disabled={speedIdx <= 0} title="Faster">
+              <FasterIcon />
+            </IconBtn>
           </div>
         </div>
       </div>
