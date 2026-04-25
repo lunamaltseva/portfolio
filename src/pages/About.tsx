@@ -29,16 +29,18 @@ export default function About() {
       minHeight: 'calc(100vh - 120px)',
       padding: isMobile ? '1.5rem' : '3rem',
       display: 'flex',
-      justifyContent: 'center',
+      gap: isMobile ? '0' : '3rem',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'stretch' : 'flex-end',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <div style={{ maxWidth: isMobile ? '100%' : '70%' }}>
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
         <h1 style={{
           fontFamily: 'CustomTitle, sans-serif',
           fontSize: isMobile ? '2rem' : '2.5rem',
-          fontWeight: 'bold',
           color: '#ffffff',
-          marginBottom: '2rem',
-          textAlign: 'center',
+          margin: '0 0 2rem 0',
         }}>
           About Me
         </h1>
@@ -104,6 +106,40 @@ export default function About() {
           </div>
         </section>
       </div>
+
+      <img
+        src="/design/Experte About.png"
+        alt="Experte"
+        style={
+          isMobile
+            ? {
+                position: 'absolute',
+                bottom: 0,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                maxWidth: '80%',
+                maxHeight: '70%',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                objectPosition: 'bottom',
+                opacity: 0.08,
+                pointerEvents: 'none',
+                zIndex: 0,
+              }
+            : {
+                width: '25.6%',
+                maxWidth: '336px',
+                height: 'calc((100vh - 120px) * 0.8)',
+                objectFit: 'contain',
+                objectPosition: 'bottom',
+                flexShrink: 0,
+                alignSelf: 'flex-end',
+                display: 'block',
+                marginBottom: '-3rem',
+              }
+        }
+      />
     </div>
   );
 }

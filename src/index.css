@@ -121,6 +121,7 @@ a:hover {
   list-style: none;
   margin: 0;
   padding: 0;
+  flex: 1;
 }
 
 .nav-item {
@@ -270,6 +271,149 @@ a:hover {
   pointer-events: none;
 }
 
+.stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.stars-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200%;
+  background-repeat: repeat;
+}
+
+.stars-layer-1 {
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, #ffffff, transparent),
+    radial-gradient(1px 1px at 80px 120px, #ffffff, transparent),
+    radial-gradient(1px 1px at 150px 60px, #ffffff, transparent),
+    radial-gradient(1px 1px at 220px 200px, #ffffff, transparent),
+    radial-gradient(1px 1px at 300px 40px, #ffffff, transparent),
+    radial-gradient(1px 1px at 370px 170px, #ffffff, transparent),
+    radial-gradient(1px 1px at 50px 250px, #ffffff, transparent),
+    radial-gradient(1px 1px at 180px 320px, #ffffff, transparent);
+  background-size: 400px 400px;
+  animation: starsDrift 180s linear infinite, starsTwinkle 2.4s ease-in-out infinite;
+}
+
+.stars-layer-2 {
+  background-image:
+    radial-gradient(1.5px 1.5px at 60px 80px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 200px 150px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 350px 90px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 120px 280px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 280px 350px, #ffffff, transparent),
+    radial-gradient(1px 1px at 30px 200px, #ffffff, transparent),
+    radial-gradient(1px 1px at 410px 320px, #ffffff, transparent),
+    radial-gradient(1px 1px at 460px 60px, #ffffff, transparent);
+  background-size: 500px 500px;
+  animation: starsDrift 240s linear infinite, starsTwinkle 3.7s ease-in-out infinite 0.6s;
+}
+
+.stars-layer-3 {
+  background-image:
+    radial-gradient(2px 2px at 100px 100px, #ffffff, transparent),
+    radial-gradient(2px 2px at 400px 250px, #ffffff, transparent),
+    radial-gradient(2px 2px at 250px 450px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 540px 120px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 50px 540px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 320px 80px, #ffffff, transparent);
+  background-size: 600px 600px;
+  animation: starsDrift 320s linear infinite, starsTwinkle 5.1s ease-in-out infinite 1.3s;
+}
+
+.stars-layer-4 {
+  background-image:
+    radial-gradient(1px 1px at 70px 50px, #ffffff, transparent),
+    radial-gradient(1px 1px at 240px 110px, #ffffff, transparent),
+    radial-gradient(1px 1px at 130px 230px, #ffffff, transparent),
+    radial-gradient(1px 1px at 330px 280px, #ffffff, transparent),
+    radial-gradient(1px 1px at 410px 40px, #ffffff, transparent),
+    radial-gradient(1px 1px at 90px 360px, #ffffff, transparent);
+  background-size: 450px 450px;
+  animation: starsDrift 200s linear infinite, starsTwinkle 2.9s ease-in-out infinite 1.8s;
+}
+
+.stars-layer-5 {
+  background-image:
+    radial-gradient(1.5px 1.5px at 160px 40px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 380px 200px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 220px 380px, #ffffff, transparent),
+    radial-gradient(1px 1px at 480px 460px, #ffffff, transparent),
+    radial-gradient(1px 1px at 30px 420px, #ffffff, transparent);
+  background-size: 550px 550px;
+  animation: starsDrift 280s linear infinite, starsTwinkle 4.3s ease-in-out infinite 2.5s;
+}
+
+@keyframes starsDrift {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+@keyframes starsTwinkle {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.15; }
+}
+
+.moon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36rem;
+  height: 36rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.moon-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background-color: #000000;
+  animation: moonHalfSwap 24s steps(1, end) infinite;
+}
+
+.moon-ellipse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+  animation: moonEllipse 24s linear infinite;
+}
+
+@keyframes moonHalfSwap {
+  0%,    50%    { left: 0; }
+  50.01%, 100% { left: 50%; }
+}
+
+@keyframes moonEllipse {
+  0%     { transform: scaleX(1); background-color: #000000; }
+  25%    { transform: scaleX(0); background-color: #000000; }
+  25.01% { transform: scaleX(0); background-color: #ffffff; }
+  50%    { transform: scaleX(1); background-color: #ffffff; }
+  75%    { transform: scaleX(0); background-color: #ffffff; }
+  75.01% { transform: scaleX(0); background-color: #000000; }
+  100%   { transform: scaleX(1); background-color: #000000; }
+}
+
+.hero-text {
+  position: relative;
+  z-index: 2;
+  mix-blend-mode: difference;
+}
+
 .hero-title {
   font-family: var(--font-title);
   font-size: 3.5rem;
@@ -407,5 +551,12 @@ a:hover {
 
   .hero-subtitle {
     font-size: 1.1rem;
+  }
+
+  .moon {
+    width: 85vw;
+    height: 85vw;
+    max-width: 36rem;
+    max-height: 36rem;
   }
 }

@@ -114,6 +114,14 @@ const sections: AcademicSection[] = [
     description: 'Long-form analytical and expository writing.',
     items: [
       {
+        title: 'Semiotic Analysis of Christopher Nolan’s “The Odyssey” Preliminary Movie Poster',
+        language: 'English',
+        publication: 'Course: Critical Approaches in Modern Media',
+        date: 'March 2026',
+        description: 'The Odyssey is a notoriously difficult work to capture on film. Said to have been orally composed around 7th century BCE by Homer, the epic is counted as one of the most influential works of literature of all time. The narrative is built around Odysseus, a hero of the Trojan war, and his 9-year-long journey back home. Yet it is not the volume of myths that renders the work gruesome to depict: it is the non-linear and asynchronous development of the storylines across its 24 books that makes it impossible to reinstate the epic in a big screen movie. In spite of that, Christopher Nolan, a director and Hollywood staple renowned for many of his exceptional films, will debut his “A-Budget Hollywood,” highly-anticipated rendition in cinemas across the world in the summer of 2026. Using semiotic analysis, this paper will argue that Christopher Nolan’s The Odyssey poster depicts a scene from Book 11 of Homer’s The Odyssey from the perspective of King Agamemnon.',
+        pdfUrl: '/Odyssey Poster Analysis.pdf',
+      },
+      {
         title: 'The Antique and the Modern Promethies',
         language: 'English',
         publication: 'Course: First Year Seminar I',

@@ -13,20 +13,54 @@ export default function Fiction() {
       backgroundColor: '#000000',
       minHeight: 'calc(100vh - 150px)',
       display: 'flex',
-      alignItems: 'flex-end',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'stretch' : 'flex-end',
+      justifyContent: isMobile ? 'space-between' : undefined,
       padding: isMobile ? '1.5rem' : '3rem',
+      gap: isMobile ? '1.5rem' : 0,
       overflow: 'hidden'
     }}>
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        height: '50%',
-        background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%)',
-        zIndex: 1,
-        pointerEvents: 'none'
-      }} />
+      {!isMobile && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          height: '50%',
+          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%)',
+          zIndex: 1,
+          pointerEvents: 'none'
+        }} />
+      )}
+      {isMobile ? (
+        <img
+          src="/design/Chapter II preview.png"
+          alt="Chapter II preview"
+          style={{
+            width: '100%',
+            height: 'auto',
+            objectFit: 'contain',
+            display: 'block',
+            margin: 'auto 0'
+          }}
+        />
+      ) : (
+        <img
+          src="/design/Chapter II preview.png"
+          alt="Chapter II preview"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            right: '12rem',
+            transform: 'translateY(-50%)',
+            maxHeight: '95%',
+            maxWidth: '55%',
+            objectFit: 'contain',
+            zIndex: 2,
+            pointerEvents: 'none'
+          }}
+        />
+      )}
       <div style={{ maxWidth: isMobile ? '100%' : '600px', position: 'relative', zIndex: 2 }}>
         <h1 style={{
           fontFamily: 'Thezeraine, serif',
@@ -35,7 +69,7 @@ export default function Fiction() {
           marginBottom: '1.5rem',
           lineHeight: '1.2'
         }}>
-          Thezeraine
+          Thezeraine.
         </h1>
 
         <div style={{
