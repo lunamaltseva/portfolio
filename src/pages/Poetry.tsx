@@ -42,7 +42,7 @@ const CYCLE_DATA: CycleDay[] = [
   { day: 28, phase: 'Luteal',     lh: 4.66,  estrogen: 121.24, progesterone: 7.27  },
 ];
 
-// Min-max normalisation — used for poem/phrase selection so full range maps to all 14 lines
+// Min-max — poem selection spans full [0, 1]
 const E_MIN  = Math.min(...CYCLE_DATA.map(d => d.estrogen));
 const E_MAX  = Math.max(...CYCLE_DATA.map(d => d.estrogen));
 const P_MIN  = Math.min(...CYCLE_DATA.map(d => d.progesterone));
@@ -50,22 +50,16 @@ const P_MAX  = Math.max(...CYCLE_DATA.map(d => d.progesterone));
 const LH_MIN = Math.min(...CYCLE_DATA.map(d => d.lh));
 const LH_MAX = Math.max(...CYCLE_DATA.map(d => d.lh));
 
-// True-zero normalisation — used for graph display so 0 is true 0
-const E_ABSMAX  = E_MAX;
-const P_ABSMAX  = P_MAX;
-const LH_ABSMAX = LH_MAX;
-
 function normMinMax(v: number, min: number, max: number) { return (v - min) / (max - min); }
 function normTrueZero(v: number, max: number) { return v / max; }
 
-// Catmull-Rom arrays — two sets, one per normalisation
 const E_RAW_POEM  = CYCLE_DATA.map(d => normMinMax(d.estrogen,     E_MIN,  E_MAX));
 const P_RAW_POEM  = CYCLE_DATA.map(d => normMinMax(d.progesterone, P_MIN,  P_MAX));
 const LH_RAW_POEM = CYCLE_DATA.map(d => normMinMax(d.lh,           LH_MIN, LH_MAX));
 
-const E_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.estrogen,     E_ABSMAX));
-const P_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.progesterone, P_ABSMAX));
-const LH_RAW_GRAPH = CYCLE_DATA.map(d => normTrueZero(d.lh,           LH_ABSMAX));
+const E_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.estrogen,     E_MAX));
+const P_RAW_GRAPH  = CYCLE_DATA.map(d => normTrueZero(d.progesterone, P_MAX));
+const LH_RAW_GRAPH = CYCLE_DATA.map(d => normTrueZero(d.lh,           LH_MAX));
 
 // Catmull-Rom spline (periodic)
 function catmullRom(arr: number[], t: number): number {
@@ -85,7 +79,6 @@ function catmullRom(arr: number[], t: number): number {
   );
 }
 
-// For poem selection — min-max normalised, full [0,1] range
 function interpolate(dayFrac: number): { e: number; p: number; lh: number } {
   return {
     e:  Math.max(0, Math.min(1, catmullRom(E_RAW_POEM,  dayFrac))),
@@ -94,7 +87,6 @@ function interpolate(dayFrac: number): { e: number; p: number; lh: number } {
   };
 }
 
-// For graph display — true-zero normalised, no upper clamp so spline peak isn't flattened
 function interpolateGraph(dayFrac: number): { e: number; p: number; lh: number } {
   return {
     e:  Math.max(0, catmullRom(E_RAW_GRAPH,  dayFrac)),
@@ -105,88 +97,180 @@ function interpolateGraph(dayFrac: number): { e: number; p: number; lh: number }
 
 // --- Poems ---
 
-const POEMS = [
-  'But such a form as Grecian goldsmiths make!',
-  'О, мы в себя вбираем истину на выдохе, а не на вдохе',
-  'The old lie: Dulce et decorum est',
-  'A plague o\u2019 both your houses',
-  'A poet could not but be gay in such a jocund company',
-  'Something is rotten in the state of Denmark',
-  'So should I, after the tea and cakes and ices',
-  'Let me not to the marriage of true minds admit impediments',
-  'Let him kiss me with the kisses of his mouth: for thy love is better than wine.',
-  'It matters not how strait the gait',
-  'Please tell me in two words what you was going to tell in a thousands',
-  'To strive, to seek, to find, and not to yield',
-  'I have measured out my life with coffee spoons',
-  'Do not go gentle into that good night',
+interface PoemData {
+  text: string;
+  author: string;
+  contextAbove: string;
+  contextBelow: string;
+  source: string;
+}
+
+const POEM_DATA: PoemData[] = [
+  {
+    text: 'Now all the stars are making love with each other',
+    author: 'Astra Magazine',
+    contextAbove: 'I sense\nI know\nthe moment of prayer, which moment it is',
+    contextBelow: '',
+    source: 'https://astra-mag.com/articles/border-walls/',
+  },
+  {
+    text: 'Thine alabaster cities gleam undimmed by human tears!',
+    author: 'Katharine Lee Bates',
+    contextAbove: 'America! America! God shed His grace on thee,',
+    contextBelow: 'And crown thy good with brotherhood from sea to shining sea!',
+    source: 'America the Beautiful',
+  },
+  {
+    text: 'I need you to see me like a tattoo on the inside of your eyelid',
+    author: 'Afona',
+    contextAbove: 'I need\n that when you close your eyes against the sun',
+    contextBelow: 'With a red hat which doesn\u2019t go and doesn\u2019t suit me.',
+    source: 'https://afona.livejournal.com/4851.html',
+  },
+  {
+    text: 'Still, I rise.',
+    author: 'Maya Angelou',
+    contextAbove: 'Just like hopes springing high,',
+    contextBelow: '\nDid you want to see me broken?',
+    source: 'Still I Rise',
+  },
+  {
+    text: 'When I am an old woman I shall wear purple',
+    author: 'Jenny Joseph',
+    contextAbove: '',
+    contextBelow: 'With a red hat which doesn\'t go, and doesn\'t suit me.',
+    source: 'Warning',
+  },
+  {
+    text: 'Oh, how I love the resoluteness',
+    author: 'Marilyn Chin',
+    contextAbove: 'I am Marilyn Mei Ling Chin',
+    contextBelow: 'of that first person singular',
+    source: 'How I Got My Name',
+  },
+  {
+    text: 'They fear when our shameless grief and anger flows in sight',
+    author: 'Mirva Haltia',
+    contextAbove: '',
+    contextBelow: '',
+    source: 'Contemporary Karelian poetry',
+  },
+  {
+    text: '\"Hope\" is the thing with feathers',
+    author: 'Emily Dickinson',
+    contextAbove: '',
+    contextBelow: 'That perches in the soul',
+    source: 'Poem 314',
+  },
+  {
+    text: 'I let go of how difficult it has been to be a woman',
+    author: 'Bhanu Kapil',
+    contextAbove: 'In the underground spring,',
+    contextBelow: 'or an immigrant, or a mother, or a writer.',
+    source: 'Seven Poems for Seven Flowers',
+  },
+  {
+    text: 'Let all who prate of Beauty hold their peace',
+    author: 'Edna St. Vincent Millay',
+    contextAbove: '',
+    contextBelow: 'And lay them prone upon the earth and cease',
+    source: 'Euclid Alone Has Looked on Beauty Bare',
+  },
+  {
+    text: 'And somewhere, each of us must help the other die.',
+    author: 'Adrienne Rich',
+    contextAbove: 'I touch you knowing we weren\u2019t born tomorrow,\nand somehow, each of us will help the other live,',
+    contextBelow: '',
+    source: 'Twenty-One Love Poems, III',
+  },
+  {
+    text: 'Because I could not stop for Death \u2013',
+    author: 'Emily Dickinson',
+    contextAbove: '',
+    contextBelow: 'He kindly stopped for me \u2014',
+    source: 'Poem 479',
+  },
+  {
+    text: 'Do not approach my triumphant night. I don\u2019t know you.',
+    author: 'Anna Akhmatova',
+    contextAbove: '',
+    contextBelow: '',
+    source: 'Anthology',
+  },
+  {
+    text: 'Male is an incomplete female, a walking abortion, aborted at the gene stage.',
+    author: 'Valerie Solanas',
+    contextAbove: '',
+    contextBelow: '',
+    source: 'SCUM Manifesto',
+  },
 ];
 
+const POEMS = POEM_DATA.map(d => d.text);
 const N = POEMS.length; // 14
 
-// highest hormone (1.0) → index 0 (poem 1); lowest (0.0) → index 13 (poem 14)
 function hormoneLine(v: number): number {
   return N - 1 - Math.min(N - 1, Math.floor(v * N));
 }
 
-// --- Sentence phrases (all verified substrings of their poem line) ---
+// --- Sentence phrases (verified substrings of their poem line) ---
 
 const E_NPS: string[] = [
-  'such a form',                      // 0
-  'истину',                           // 1
-  'the old lie',                      // 2
-  'both your houses',                 // 3
-  'such a jocund company',            // 4
-  'the state of Denmark',             // 5
-  'the tea and cakes and ices',       // 6
-  'the marriage of true minds',       // 7
-  'the kisses of his mouth',          // 8
-  'the gait',                         // 9
-  'a thousands',                      // 10
-  'not to yield',                     // 11
-  'coffee spoons',                    // 12
-  'that good night',                  // 13
+  'all the stars',                            // 0
+  'alabaster cities',                         // 1
+  'a tattoo on the inside of your eyelid',    // 2
+  'I rise',                                   // 3
+  'an old woman',                             // 4
+  'the resoluteness',                         // 5
+  'our shameless grief and anger',            // 6
+  'the thing with feathers',                  // 7
+  'a woman',                                  // 8
+  'Beauty',                                   // 9
+  'each of us',                               // 10
+  'Death',                                    // 11
+  'my triumphant night',                      // 12
+  'a walking abortion',                       // 13
 ];
 
 const LH_NPS: string[] = [
-  'Grecian goldsmiths',               // 0
-  'на выдохе',                        // 1
-  'Dulce et decorum est',             // 2
-  'a plague',                         // 3
-  'a poet',                           // 4
-  'is rotten',                        // 5
-  'after the tea and cakes and ices', // 6
-  'impediments',                      // 7
-  'love is better than wine',         // 8
-  'how strait the gait',              // 9
-  'two words',                        // 10
-  'to seek, to find',                 // 11
-  'my life',                          // 12
-  'good night',                       // 13
+  'love with each other',                     // 0
+  'human tears',                              // 1
+  'your eyelid',                              // 2
+  'Still',                                    // 3
+  'purple',                                   // 4
+  'how I love',                               // 5
+  'in sight',                                 // 6
+  'feathers',                                 // 7
+  'how difficult',                            // 8
+  'their peace',                              // 9
+  'the other die',                            // 10
+  'for Death',                                // 11
+  'I don\u2019t know you',                    // 12
+  'the gene stage',                           // 13
 ];
 
 const P_VERBS: string[] = [
-  'make',                             // 0
-  'вбираем',                          // 1
-  'Dulce et decorum est',             // 2
-  'plague',                           // 3
-  'could not but be gay',             // 4
-  'is rotten',                        // 5
-  'should I',                         // 6
-  'admit',                            // 7
-  'kiss me',                          // 8
-  'matters not',                      // 9
-  'tell me',                          // 10
-  'strive',                           // 11
-  'measured out',                     // 12
-  'go gentle',                        // 13
+  'are making',                               // 0
+  'gleam undimmed',                           // 1
+  'see me',                                   // 2
+  'rise',                                     // 3
+  'shall wear',                               // 4
+  'love',                                     // 5
+  'fear',                                     // 6
+  'is',                                       // 7
+  'let go',                                   // 8
+  'hold their peace',                         // 9
+  'must help',                                // 10
+  'could not stop',                           // 11
+  'Do not approach',                          // 12
+  'aborted',                                  // 13
 ];
 
 function buildSentence(eIdx: number, pIdx: number, lhIdx: number): string {
   return `${E_NPS[eIdx]} ${P_VERBS[pIdx]} ${LH_NPS[lhIdx]}`;
 }
 
-// Highlight verified substrings within a poem line
+// Highlight substrings within a poem line
 function renderLine(
   text: string,
   highlights: { phrase: string; color: string }[],
@@ -209,11 +293,63 @@ function renderLine(
   let cursor = 0;
   for (const { start, end, color } of merged) {
     if (start > cursor) parts.push(text.slice(cursor, start));
-    parts.push(<span key={start} style={{ color }}>{text.slice(start, end)}</span>);
+    parts.push(<span key={start} style={{ color, fontWeight: 600 }}>{text.slice(start, end)}</span>);
     cursor = end;
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
   return parts;
+}
+
+// --- Tooltip component ---
+
+function PoemTooltip({ poem, isMobile }: { poem: PoemData; isMobile: boolean }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '100%',
+      left: 0,
+      marginBottom: '0.5rem',
+      background: 'rgba(255, 255, 255, 0.97)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(0, 0, 0, 0.08)',
+      borderRadius: '8px',
+      padding: isMobile ? '0.7rem 0.9rem' : '0.85rem 1.1rem',
+      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04)',
+      zIndex: 10,
+      maxWidth: isMobile ? '85vw' : '480px',
+      minWidth: '200px',
+      fontFamily: '"Cormorant Garamond", Georgia, serif',
+      lineHeight: 1.6,
+      pointerEvents: 'none',
+    }}>
+      {poem.contextAbove && (
+        <div style={{ fontSize: '0.9rem', color: '#999', fontStyle: 'italic', marginBottom: '0.25rem', whiteSpace: 'pre-line' }}>
+          {poem.contextAbove}
+        </div>
+      )}
+      <div style={{ fontSize: '0.95rem', color: '#222', fontWeight: 500 }}>
+        {poem.text}
+      </div>
+      {poem.contextBelow && (
+        <div style={{ fontSize: '0.9rem', color: '#999', fontStyle: 'italic', marginTop: '0.25rem', whiteSpace: 'pre-line' }}>
+          {poem.contextBelow}
+        </div>
+      )}
+      <div style={{
+        marginTop: '0.6rem',
+        fontSize: '0.75rem',
+        color: '#bbb',
+        borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+        paddingTop: '0.4rem',
+        letterSpacing: '0.02em',
+      }}>
+        {poem.author && <span>{poem.author}</span>}
+        {poem.author && poem.source && <span> — </span>}
+        {poem.source && <span style={{ fontStyle: 'italic' }}>{poem.source}</span>}
+      </div>
+    </div>
+  );
 }
 
 // --- Phases ---
@@ -227,22 +363,21 @@ const PHASES = [
 
 // --- Colors ---
 
-const COLOR_E  = '#b06090';
-const COLOR_P  = '#c8a800';
-const COLOR_LH = '#3a72c8';
+const COLOR_E  = '#c46b8f';
+const COLOR_P  = '#d4a843';
+const COLOR_LH = '#5b8fd4';
 
 // --- Graph layout ---
 
 const PAD_L     = 2;
 const PAD_R     = 0;
-const PAD_TOP   = 12;  // headroom so Catmull-Rom overshoot isn't clipped
+const PAD_TOP   = 12;
 const PAD_PHASE = 18;
 const PAD_DAYS  = 18;
 const PAD_BOT   = PAD_PHASE + PAD_DAYS;
 const VIEW_DAYS = 28;
 
-// Scale factors applied to P and LH on the graph so estrogen is dominant
-const GRAPH_SCALE_P  = 0.6
+const GRAPH_SCALE_P  = 0.6;
 const GRAPH_SCALE_LH = 0.7;
 
 function makeHelpers(innerW: number, innerH: number) {
@@ -252,13 +387,8 @@ function makeHelpers(innerW: number, innerH: number) {
   function valToY(v: number) {
     return PAD_TOP + innerH - v * innerH;
   }
-  const GRAPH_SCALE: Record<'e' | 'p' | 'lh', number> = {
-    e: 0.82,
-    p: GRAPH_SCALE_P,
-    lh: GRAPH_SCALE_LH,
-  };
+  const GRAPH_SCALE: Record<'e' | 'p' | 'lh', number> = { e: 0.82, p: GRAPH_SCALE_P, lh: GRAPH_SCALE_LH };
 
-  // dayFrac passed to interpolateGraph is 0-indexed; offsetDay is 1-based
   function buildPath(offsetDay: number, key: 'e' | 'p' | 'lh'): string {
     const startDay = offsetDay - 0.5;
     const endDay   = offsetDay + VIEW_DAYS + 0.5;
@@ -273,25 +403,43 @@ function makeHelpers(innerW: number, innerH: number) {
     }
     return d;
   }
-  return { dayToX, buildPath };
+
+  function buildAreaPath(offsetDay: number, key: 'e' | 'p' | 'lh'): string {
+    const startDay = offsetDay - 0.5;
+    const endDay   = offsetDay + VIEW_DAYS + 0.5;
+    const steps    = Math.ceil((endDay - startDay) * 12);
+    let d = '';
+    const baseY = PAD_TOP + innerH;
+    const firstX = dayToX(startDay, offsetDay);
+    d = `M ${firstX.toFixed(2)},${baseY.toFixed(2)}`;
+    for (let s = 0; s <= steps; s++) {
+      const df   = startDay + (s / steps) * (endDay - startDay);
+      const vals = interpolateGraph(df - 1);
+      const x    = dayToX(df, offsetDay);
+      const y    = valToY(vals[key] * GRAPH_SCALE[key]);
+      d += ` L ${x.toFixed(2)},${y.toFixed(2)}`;
+    }
+    const lastX = dayToX(endDay, offsetDay);
+    d += ` L ${lastX.toFixed(2)},${baseY.toFixed(2)} Z`;
+    return d;
+  }
+
+  return { dayToX, buildPath, buildAreaPath };
 }
 
 // --- SVG icon buttons ---
 
-function IconBtn({
-  onClick, disabled, children, title,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-  title?: string;
+function IconBtn({ onClick, disabled, children, title }: {
+  onClick: () => void; disabled?: boolean; children: React.ReactNode; title?: string;
 }) {
   return (
     <button onClick={onClick} disabled={disabled} title={title} style={{
-      background: 'none', border: '1px solid #bbb', borderRadius: '3px',
-      padding: '4px 8px', cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.35 : 1, display: 'flex',
+      background: 'none', border: '1px solid rgba(0, 0, 0, 0.12)', borderRadius: '50%',
+      padding: '8px', cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.3 : 0.7, display: 'flex',
       alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+      width: '34px', height: '34px',
+      transition: 'opacity 0.2s, border-color 0.2s',
     }}>
       {children}
     </button>
@@ -299,26 +447,24 @@ function IconBtn({
 }
 
 function SlowerIcon() {
-  return <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
-    <polygon points="8,1 1,7 8,13" fill="#444" />
-    <polygon points="15,1 8,7 15,13" fill="#444" />
+  return <svg width="14" height="12" viewBox="0 0 16 14" fill="none">
+    <polygon points="8,1 1,7 8,13" fill="#555" /><polygon points="15,1 8,7 15,13" fill="#555" />
   </svg>;
 }
 function FasterIcon() {
-  return <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
-    <polygon points="1,1 8,7 1,13" fill="#444" />
-    <polygon points="8,1 15,7 8,13" fill="#444" />
+  return <svg width="14" height="12" viewBox="0 0 16 14" fill="none">
+    <polygon points="1,1 8,7 1,13" fill="#555" /><polygon points="8,1 15,7 8,13" fill="#555" />
   </svg>;
 }
 function PlayIcon() {
-  return <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-    <polygon points="1,1 11,7 1,13" fill="#444" />
+  return <svg width="11" height="12" viewBox="0 0 12 14" fill="none">
+    <polygon points="2,1 11,7 2,13" fill="#555" />
   </svg>;
 }
 function PauseIcon() {
-  return <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-    <rect x="1" y="1" width="4" height="12" fill="#444" />
-    <rect x="7" y="1" width="4" height="12" fill="#444" />
+  return <svg width="11" height="12" viewBox="0 0 12 14" fill="none">
+    <rect x="1" y="1" width="3.5" height="12" rx="0.5" fill="#555" />
+    <rect x="7.5" y="1" width="3.5" height="12" rx="0.5" fill="#555" />
   </svg>;
 }
 
@@ -328,19 +474,24 @@ interface GraphProps {
   offsetDay: number;
   width: number;
   height: number;
-  onDragOffset: (v: number) => void;
+  onDragStart: () => void;
+  onDragMove: (newOffset: number) => void;
+  onDragEnd: () => void;
 }
 
-function CycleGraph({ offsetDay, width, height, onDragOffset }: GraphProps) {
+function CycleGraph({ offsetDay, width, height, onDragStart, onDragMove, onDragEnd }: GraphProps) {
   const innerW = width - PAD_L - PAD_R;
   const innerH = height - PAD_TOP - PAD_BOT;
-  const { dayToX, buildPath } = makeHelpers(innerW, innerH);
+  const { dayToX, buildPath, buildAreaPath } = makeHelpers(innerW, innerH);
 
   const pathE  = buildPath(offsetDay, 'e');
   const pathP  = buildPath(offsetDay, 'p');
   const pathLH = buildPath(offsetDay, 'lh');
 
-  // Compute rep range dynamically so labels never run out regardless of offsetDay
+  const areaE  = buildAreaPath(offsetDay, 'e');
+  const areaP  = buildAreaPath(offsetDay, 'p');
+  const areaLH = buildAreaPath(offsetDay, 'lh');
+
   const repMin = Math.floor((offsetDay - 1) / 28) - 1;
   const repMax = Math.ceil((offsetDay + VIEW_DAYS) / 28) + 1;
 
@@ -358,13 +509,7 @@ function CycleGraph({ offsetDay, width, height, onDragOffset }: GraphProps) {
       if (x2 > PAD_L && x1 < PAD_L + innerW) {
         const clipX = Math.max(x1, PAD_L);
         const clipW = Math.min(x2, PAD_L + innerW) - clipX;
-        phaseItems.push({
-          name: ph.name,
-          cx: (clipX + clipX + clipW) / 2,
-          x1: clipX,
-          clipX,
-          clipW,
-        });
+        phaseItems.push({ name: ph.name, cx: (clipX + clipX + clipW) / 2, x1: clipX, clipX, clipW });
       }
     });
   }
@@ -382,97 +527,141 @@ function CycleGraph({ offsetDay, width, height, onDragOffset }: GraphProps) {
 
   function onMouseDown(e: React.MouseEvent) {
     dragRef.current = { startX: e.clientX, startOffset: offsetDay };
+    onDragStart();
     e.preventDefault();
   }
   function onMouseMove(e: React.MouseEvent) {
     if (!dragRef.current) return;
-    onDragOffset(dragRef.current.startOffset - ((e.clientX - dragRef.current.startX) / innerW) * VIEW_DAYS);
+    onDragMove(dragRef.current.startOffset - ((e.clientX - dragRef.current.startX) / innerW) * VIEW_DAYS);
   }
-  function onMouseUp() { dragRef.current = null; }
+  function onMouseUp() {
+    if (dragRef.current) { dragRef.current = null; onDragEnd(); }
+  }
 
   function onTouchStart(e: React.TouchEvent) {
     touchRef.current = { startX: e.touches[0].clientX, startOffset: offsetDay };
+    onDragStart();
   }
   function onTouchMove(e: React.TouchEvent) {
     if (!touchRef.current) return;
-    onDragOffset(touchRef.current.startOffset - ((e.touches[0].clientX - touchRef.current.startX) / innerW) * VIEW_DAYS);
+    onDragMove(touchRef.current.startOffset - ((e.touches[0].clientX - touchRef.current.startX) / innerW) * VIEW_DAYS);
   }
-  function onTouchEnd() { touchRef.current = null; }
+  function onTouchEnd() {
+    if (touchRef.current) { touchRef.current = null; onDragEnd(); }
+  }
 
   return (
     <svg width={width} height={height}
-      style={{ display: 'block', fontFamily: 'monospace', cursor: 'grab', userSelect: 'none' }}
+      style={{ display: 'block', fontFamily: "'DM Mono', monospace", cursor: 'grab', userSelect: 'none' }}
       onMouseDown={onMouseDown} onMouseMove={onMouseMove}
       onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
     >
-      <clipPath id="graph-clip">
-        <rect x={PAD_L} y={PAD_TOP} width={innerW} height={innerH} />
-      </clipPath>
+      <defs>
+        <clipPath id="graph-clip"><rect x={PAD_L} y={PAD_TOP} width={innerW} height={innerH} /></clipPath>
+        <linearGradient id="grad-e" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={COLOR_E} stopOpacity="0.12" />
+          <stop offset="100%" stopColor={COLOR_E} stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="grad-p" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={COLOR_P} stopOpacity="0.10" />
+          <stop offset="100%" stopColor={COLOR_P} stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="grad-lh" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={COLOR_LH} stopOpacity="0.10" />
+          <stop offset="100%" stopColor={COLOR_LH} stopOpacity="0" />
+        </linearGradient>
+      </defs>
 
       <rect x={PAD_L} y={PAD_TOP} width={innerW} height={innerH} fill="#ffffff" />
 
       {ovulationXs.map((x, i) => (
         <g key={i} clipPath="url(#graph-clip)">
-          <line x1={x} y1={PAD_TOP} x2={x} y2={PAD_TOP + innerH} stroke="#ddd" strokeWidth={1} strokeDasharray="4,3" />
-          <text x={x + 3} y={PAD_TOP + 11} fontSize={8} fill="#bbb">ovulation</text>
+          <line x1={x} y1={PAD_TOP} x2={x} y2={PAD_TOP + innerH} stroke="rgba(0,0,0,0.06)" strokeWidth={1} strokeDasharray="4,4" />
+          <text x={x + 4} y={PAD_TOP + 11} fontSize={7.5} fill="rgba(0,0,0,0.2)" fontStyle="italic" letterSpacing="0.04em">ovulation</text>
         </g>
       ))}
 
-      <path d={pathE}  fill="none" stroke={COLOR_E}  strokeWidth={1.5} clipPath="url(#graph-clip)" />
-      <path d={pathP}  fill="none" stroke={COLOR_P}  strokeWidth={1.5} clipPath="url(#graph-clip)" />
-      <path d={pathLH} fill="none" stroke={COLOR_LH} strokeWidth={1.5} clipPath="url(#graph-clip)" />
+      {/* Gradient fills */}
+      <path d={areaE}  fill="url(#grad-e)"  clipPath="url(#graph-clip)" />
+      <path d={areaP}  fill="url(#grad-p)"  clipPath="url(#graph-clip)" />
+      <path d={areaLH} fill="url(#grad-lh)" clipPath="url(#graph-clip)" />
 
-      {/* Reading line */}
-      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L} y2={PAD_TOP + innerH} stroke="#aaa" strokeWidth={1} />
+      {/* Curve strokes */}
+      <path d={pathE}  fill="none" stroke={COLOR_E}  strokeWidth={2} clipPath="url(#graph-clip)" opacity={0.85} />
+      <path d={pathP}  fill="none" stroke={COLOR_P}  strokeWidth={2} clipPath="url(#graph-clip)" opacity={0.85} />
+      <path d={pathLH} fill="none" stroke={COLOR_LH} strokeWidth={2} clipPath="url(#graph-clip)" opacity={0.85} />
 
-      {/* Bottom + left borders */}
-      <line x1={PAD_L} y1={PAD_TOP + innerH} x2={PAD_L + innerW} y2={PAD_TOP + innerH} stroke="#ccc" strokeWidth={1} />
-      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L} y2={PAD_TOP + innerH} stroke="#ccc" strokeWidth={1} />
+      {/* Axes */}
+      <line x1={PAD_L} y1={PAD_TOP + innerH} x2={PAD_L + innerW} y2={PAD_TOP + innerH} stroke="rgba(0,0,0,0.1)" strokeWidth={1} />
+      <line x1={PAD_L} y1={PAD_TOP} x2={PAD_L} y2={PAD_TOP + innerH} stroke="rgba(0,0,0,0.1)" strokeWidth={1} />
 
       {phaseItems.map(({ name, cx, x1, clipX, clipW }, i) => (
         <g key={i}>
           <clipPath id={`phase-clip-${i}`}>
             <rect x={clipX} y={PAD_TOP + innerH} width={clipW} height={PAD_PHASE} />
           </clipPath>
-          <line x1={x1} y1={PAD_TOP + innerH} x2={x1} y2={PAD_TOP + innerH + PAD_PHASE} stroke="#e0e0e0" strokeWidth={1} />
-          <text
-            x={cx} y={PAD_TOP + innerH + PAD_PHASE - 4}
-            textAnchor="middle" fontSize={8} fill="#999"
-            clipPath={`url(#phase-clip-${i})`}
-          >{name}</text>
+          <line x1={x1} y1={PAD_TOP + innerH} x2={x1} y2={PAD_TOP + innerH + PAD_PHASE} stroke="rgba(0,0,0,0.05)" strokeWidth={1} />
+          <text x={cx} y={PAD_TOP + innerH + PAD_PHASE - 4} textAnchor="middle" fontSize={7.5} fill="rgba(0,0,0,0.3)"
+            letterSpacing="0.04em" clipPath={`url(#phase-clip-${i})`}>{name}</text>
         </g>
       ))}
 
       {dayTickItems.map(({ label, x }, i) => (
-        <text key={i} x={x} y={PAD_TOP + innerH + PAD_PHASE + PAD_DAYS - 4} textAnchor="middle" fontSize={9} fill="#777">
+        <text key={i} x={x} y={PAD_TOP + innerH + PAD_PHASE + PAD_DAYS - 4} textAnchor="middle" fontSize={8} fill="rgba(0,0,0,0.25)">
           {label}
         </text>
       ))}
 
+      {/* Legend */}
       <g transform={`translate(${PAD_L + innerW - 6}, 14)`}>
-        <line x1={-96} y1={0}  x2={-82} y2={0}  stroke={COLOR_E}  strokeWidth={1.5} />
-        <text x={-79} y={4}   fontSize={9} fill={COLOR_E}  textAnchor="start">Estrogen</text>
-        <line x1={-96} y1={14} x2={-82} y2={14} stroke={COLOR_P}  strokeWidth={1.5} />
-        <text x={-79} y={18}  fontSize={9} fill={COLOR_P}  textAnchor="start">Progesterone</text>
-        <line x1={-96} y1={28} x2={-82} y2={28} stroke={COLOR_LH} strokeWidth={1.5} />
-        <text x={-79} y={32}  fontSize={9} fill={COLOR_LH} textAnchor="start">LH</text>
+        <line x1={-100} y1={0}  x2={-86} y2={0}  stroke={COLOR_E}  strokeWidth={2} opacity={0.85} />
+        <text x={-82} y={4}   fontSize={8.5} fill={COLOR_E}  textAnchor="start" opacity={0.8} letterSpacing="0.02em">Estrogen</text>
+        <line x1={-100} y1={15} x2={-86} y2={15} stroke={COLOR_P}  strokeWidth={2} opacity={0.85} />
+        <text x={-82} y={19}  fontSize={8.5} fill={COLOR_P}  textAnchor="start" opacity={0.8} letterSpacing="0.02em">Progesterone</text>
+        <line x1={-100} y1={30} x2={-86} y2={30} stroke={COLOR_LH} strokeWidth={2} opacity={0.85} />
+        <text x={-82} y={34}  fontSize={8.5} fill={COLOR_LH} textAnchor="start" opacity={0.8} letterSpacing="0.02em">LH</text>
       </g>
     </svg>
   );
 }
 
-// --- Speed steps: index 0 = fastest, last = slowest ---
+// --- Speed ---
 const SPEED_STEPS = [0.2, 0.5, 1, 2, 5, 10, 20];
-const DEFAULT_SPEED_IDX = 4; // 5 s/day
+const DEFAULT_SPEED_IDX = 4;
+
+// --- Inject global styles (font import + keyframes) ---
+const STYLE_ID = '__poetry-global-styles';
+function ensureGlobalStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&display=swap');
+    @keyframes poetry-fade-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes poetry-sentence-glow {
+      0%, 100% { opacity: 0.85; }
+      50%      { opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default function Poetry() {
   const isMobile = useIsMobile();
+
+  useEffect(() => { ensureGlobalStyles(); }, []);
 
   const [dayFrac,    setDayFrac]    = useState(1.0);
   const [speedIdx,   setSpeedIdx]   = useState(DEFAULT_SPEED_IDX);
   const [paused,     setPaused]     = useState(false);
   const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const wasPlayingRef = useRef(false);
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null);
 
   const speed = SPEED_STEPS[speedIdx];
 
@@ -501,16 +690,24 @@ export default function Poetry() {
     };
   }, [paused, tick]);
 
-  // When unpausing, if the user has dragged, absorb the drag offset into dayFrac
-  // so playback continues from where the graph was left
-  const prevPaused = useRef(paused);
-  useEffect(() => {
-    if (prevPaused.current && !paused && dragOffset !== null) {
+  const handleDragStart = useCallback(() => {
+    wasPlayingRef.current = !paused;
+    setPaused(true);
+  }, [paused]);
+
+  const handleDragMove = useCallback((newOffset: number) => {
+    setDragOffset(newOffset);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (dragOffset !== null) {
       setDayFrac(dragOffset);
       setDragOffset(null);
     }
-    prevPaused.current = paused;
-  }, [paused, dragOffset]);
+    if (wasPlayingRef.current) {
+      setPaused(false);
+    }
+  }, [dragOffset]);
 
   const offsetDay = dragOffset !== null ? dragOffset : dayFrac;
 
@@ -520,7 +717,6 @@ export default function Poetry() {
   const lhIdx    = hormoneLine(vals.lh);
   const sentence = buildSentence(eIdx, pIdx, lhIdx);
 
-  // Measure poem lines height (excludes sentence) to match graph height on desktop
   const poemLinesRef = useRef<HTMLDivElement>(null);
   const [poemHeight, setPoemHeight] = useState(500);
   useEffect(() => {
@@ -531,7 +727,6 @@ export default function Poetry() {
     return () => ro.disconnect();
   }, []);
 
-  // Measure graph column width
   const graphColRef = useRef<HTMLDivElement>(null);
   const [graphW, setGraphW] = useState(600);
   useEffect(() => {
@@ -542,25 +737,62 @@ export default function Poetry() {
     return () => ro.disconnect();
   }, []);
 
-  const graphH = isMobile ? 220 : poemHeight;
-  const font   = 'Georgia, serif';
-  const fontSize = isMobile ? '1rem' : '1.25rem';
-  const pad    = isMobile ? '1.5rem 1rem' : '3rem 2.5rem';
+  const graphH   = isMobile ? 220 : poemHeight;
+  const font     = "'Source Serif 4', Georgia, serif";
+  const fontSize = isMobile ? '1.05rem' : '1.3rem';
+  const pad      = isMobile ? '2rem 1.25rem' : '4rem 3.5rem';
 
   return (
-    <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: pad, boxSizing: 'border-box' }}>
-      <h1 style={{ fontFamily: font, fontSize: isMobile ? '1.2rem' : '1.6rem', fontWeight: 400, color: '#000', marginBottom: isMobile ? '1.25rem' : '2rem' }}>
-        MClock by Daria &amp; Luna
+    <div style={{
+      backgroundColor: '#fff',
+      minHeight: '100vh',
+      padding: pad,
+      boxSizing: 'border-box',
+      animation: 'poetry-fade-in 0.8s ease-out both',
+    }}>
+      {/* Title */}
+      <h1 style={{
+        fontFamily: font,
+        fontSize: isMobile ? '1.6rem' : '2.4rem',
+        fontWeight: 300,
+        color: '#111',
+        marginBottom: isMobile ? '0.3rem' : '0.4rem',
+        letterSpacing: '-0.02em',
+        lineHeight: 1.2,
+      }}>
+        Menstrual Cycle Clock
       </h1>
+      <div style={{
+        width: isMobile ? '40px' : '56px',
+        height: '2px',
+        background: `linear-gradient(90deg, ${COLOR_E}, ${COLOR_P}, ${COLOR_LH})`,
+        marginBottom: isMobile ? '1.5rem' : '2.5rem',
+        borderRadius: '1px',
+      }} />
 
       <div style={{
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
-        gap: isMobile ? '1.5rem' : '3rem',
+        gap: isMobile ? '2rem' : '3.5rem',
         alignItems: 'flex-start',
       }}>
         {/* Poems */}
         <div style={{ flex: '0 0 auto', minWidth: 0, width: isMobile ? '100%' : undefined }}>
+          {/* Sentence */}
+          <div style={{
+            marginBottom: isMobile ? '1.25rem' : '2rem',
+            fontFamily: font,
+            fontSize: isMobile ? '1rem' : '1.15rem',
+            color: '#333',
+            fontStyle: 'italic',
+            fontWeight: 400,
+            maxWidth: '540px',
+            lineHeight: 1.8,
+            animation: 'poetry-sentence-glow 4s ease-in-out infinite',
+          }}>
+            {sentence}
+          </div>
+
           <div ref={poemLinesRef}>
             {POEMS.map((line, i) => {
               const isActive = i === eIdx || i === pIdx || i === lhIdx;
@@ -569,32 +801,46 @@ export default function Poetry() {
               if (i === pIdx)  highlights.push({ phrase: P_VERBS[i], color: COLOR_P  });
               if (i === lhIdx) highlights.push({ phrase: LH_NPS[i],  color: COLOR_LH });
               return (
-                <div key={i} style={{ marginBottom: isMobile ? '0.35rem' : '0.55rem', opacity: isActive ? 1 : 0.22 }}>
-                  <span style={{ fontFamily: font, fontSize, color: '#111', lineHeight: 1.65 }}>
+                <div
+                  key={i}
+                  style={{
+                    marginBottom: isMobile ? '0.4rem' : '0.6rem',
+                    position: 'relative',
+                    cursor: 'default',
+                  }}
+                  onMouseEnter={() => setHoveredLine(i)}
+                  onMouseLeave={() => setHoveredLine(null)}
+                >
+                  <span style={{
+                    fontFamily: font,
+                    fontSize,
+                    color: '#111',
+                    lineHeight: 1.75,
+                    opacity: isActive ? 1 : 0.15,
+                    fontWeight: isActive ? 500 : 300,
+                    letterSpacing: '-0.01em',
+                  }}>
                     {renderLine(line, highlights)}
                   </span>
+                  {hoveredLine === i && <PoemTooltip poem={POEM_DATA[i]} isMobile={isMobile} />}
                 </div>
               );
             })}
-          </div>
-
-          <div style={{
-            marginTop: isMobile ? '1rem' : '1.75rem',
-            fontFamily: font,
-            fontSize: isMobile ? '0.875rem' : '1rem',
-            color: '#444', fontStyle: 'italic',
-            paddingLeft: isMobile ? '0' : '3rem',
-            maxWidth: '520px', lineHeight: 1.7,
-          }}>
-            {sentence}
           </div>
         </div>
 
         {/* Graph + controls */}
         <div ref={graphColRef} style={{ flex: isMobile ? '0 0 auto' : '1 1 0', minWidth: 0, width: isMobile ? '100%' : undefined }}>
-          <CycleGraph offsetDay={offsetDay} width={graphW} height={graphH} onDragOffset={setDragOffset} />
+          <CycleGraph
+            offsetDay={offsetDay}
+            width={graphW}
+            height={graphH}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+          />
 
-          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem' }}>
             <IconBtn onClick={() => setSpeedIdx(i => Math.min(SPEED_STEPS.length - 1, i + 1))} disabled={speedIdx >= SPEED_STEPS.length - 1} title="Slower">
               <SlowerIcon />
             </IconBtn>
@@ -606,6 +852,24 @@ export default function Poetry() {
             </IconBtn>
           </div>
         </div>
+      </div>
+
+      {/* Description */}
+      <div style={{
+        marginTop: isMobile ? '2.5rem' : '4rem',
+        fontFamily: font,
+        fontSize: isMobile ? '0.95rem' : '1.1rem',
+        color: '#aaa',
+        lineHeight: 1.8,
+        fontWeight: 300,
+        letterSpacing: '0.005em',
+      }}>
+        <p style={{ margin: 0 }}>
+          Though it may at first seem complicated, the Menstrual Clock makes use of the composite nature of the menstrual cycle to tell time. Based on hormonal levels of Estrogen, Progesterone, and Luteinizing Hormone, attained from averaging a PhysioNet self-report sample, the clock selects parts of the 14 excerpts from poems written by female authors, composing a sentence that can be used to communicate time.
+        </p>
+        <p style={{ margin: '1.25rem 0 0 0', fontStyle: 'italic', fontWeight: 400 }}>
+          Authors: Luna Maltseva &amp; Daria Yurishcheva
+        </p>
       </div>
     </div>
   );
