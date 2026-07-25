@@ -756,7 +756,7 @@ function BrowserMockup({ scale = 1 }: { scale?: number }) {
 
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
-  { q: 'What actually is Artemis CE?', a: 'A Real-Time Management System for Civic Engagement (or aRTMSCE) is a data-oriented grant management system defined by a set of approaches, policies, schemes, designs, and tools. All elements of the system were tailored specifically for managing and analyzing Civic Engagement projects in order to support them with statistics.' },
+  { q: 'What actually is Artemis CE?', a: 'A Real-Time Management System for Civic Engagement (or RTMSCE) is a data-oriented grant management system defined by a set of approaches, policies, schemes, designs, and tools. All elements of the system were tailored specifically for managing and analyzing Civic Engagement projects in order to support them with statistics.' },
   { q: 'Why be "data-oriented"?', a: 'With data, we can better understand the impact that we are making. Data allows us to make statements with certainty. If we reach a surprising conclusion, we can back it with data.' },
   { q: 'If I don\'t study at AUCA, can I still use Artemis CE?', a: 'Absolutely! While the full toolset might not be available, we do have public resources (like our toolset repository!) to aid student leaders in collecting and analyzing quality data in order to continue their project!' },
   { q: 'If I want to implement Artemis CE at my home institution, how do I do that?', a: 'Reach out to Luna, preferably in person. We are always looking for new partners to expand this project!'},
@@ -889,10 +889,10 @@ export default function RtmsCE() {
 
           {/* ── Paragraph 2 ───────────────────────────────────────────────── */}
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: B.gray700, margin: '0 0 4rem' }}>
-            Artemis CE is a digital, data-oriented grant management system, combining narratives with data to enable inferential decision making.
-            It has been in development for over nineteen months, and has been built to directly enhance the capabilities of civic engagement projects at no additional cost.
-            It has been deployed for 2 semesters at the AUCA Center for Civic Engagement.
-            The system aims to have a full launch on React + Postgres in February of 2027.
+            "Artemis CE" (or RTMSCE) is a digital, data-oriented grant management system, combining narratives with data to enable inferential decision making among student leaders and coordinates alike.
+            The project has been in development for over nineteen months, and has been built to directly enhance the capabilities of civic engagement projects on all sides.
+            It has been deployed for 2 semesters at the AUCA Center for Civic Engagement for their "Student Initiative Development Program."
+            The system aims to have a full launch on the web in February of 2027.
           </p>
           
           <section style={{
