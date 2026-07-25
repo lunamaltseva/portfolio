@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { NAV_ITEMS } from '../components/navData';
+import { NAV_ITEMS, NAV_LEFT, NAV_RIGHT, type NavItem } from '../components/navData';
 import { ICONS_BY_HREF } from '../components/navIcons';
 
 // ── Brand tokens ──────────────────────────────────────────────────────────────
@@ -127,6 +127,42 @@ function ThemedNavbar() {
   const mob = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const renderItem = (item: NavItem) => {
+    if (item.dropdown) {
+      return <ThemedDropdown key={item.label} label={item.label} items={item.dropdown} mob={mob} />;
+    }
+    const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
+    return (
+      <a
+        key={item.href}
+        href={item.href}
+        style={{
+          color: 'rgba(255,255,255,0.92)',
+          fontSize: '0.9rem',
+          fontWeight: 500,
+          padding: '0.4rem 0.75rem',
+          borderRadius: 4,
+          textDecoration: 'none',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      >
+        {Icon && <Icon size={15} />}
+        <span>{item.label}</span>
+      </a>
+    );
+  };
+
+  const title = (
+    <a href="/" style={{ color: '#fff', fontSize: mob ? '1rem' : '1.1rem', fontWeight: 600, letterSpacing: '-0.02em', textDecoration: 'none', flexShrink: 0 }}>
+      Luna Maltseva
+    </a>
+  );
+
   return (
     <nav style={{
       background: SCARLET,
@@ -138,51 +174,26 @@ function ThemedNavbar() {
       height: 56,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       gap: mob ? '0.5rem' : '2rem',
     }}>
-      <a href="/" style={{ color: '#fff', fontSize: mob ? '1rem' : '1.1rem', fontWeight: 600, letterSpacing: '-0.02em', textDecoration: 'none', flexShrink: 0 }}>
-        Luna Maltseva
-      </a>
-
       {!mob ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          {NAV_ITEMS.map((item) => {
-            if (item.dropdown) {
-              return <ThemedDropdown key={item.label} label={item.label} items={item.dropdown} mob={mob} />;
-            }
-            const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                style={{
-                  color: 'rgba(255,255,255,0.92)',
-                  fontSize: '0.9rem',
-                  fontWeight: 500,
-                  padding: '0.4rem 0.75rem',
-                  borderRadius: 4,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                {Icon && <Icon size={15} />}
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
-        </div>
+        <>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
+            {NAV_LEFT.map(renderItem)}
+          </div>
+          {title}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem' }}>
+            {NAV_RIGHT.map(renderItem)}
+          </div>
+        </>
       ) : (
         <>
+          {title}
           <button
             onClick={() => setMenuOpen(o => !o)}
             aria-label="Toggle menu"
-            style={{ background: 'none', border: 'none', color: '#fff', padding: '0.4rem', cursor: 'pointer', display: 'flex', marginLeft: 'auto' }}
+            style={{ background: 'none', border: 'none', color: '#fff', padding: '0.4rem', cursor: 'pointer', display: 'flex', position: 'absolute', right: mob ? '1rem' : '2rem', top: '50%', transform: 'translateY(-50%)' }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {menuOpen ? (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { NAV_ITEMS } from '../components/navData';
+import { NAV_ITEMS, NAV_LEFT, NAV_RIGHT, type NavItem } from '../components/navData';
 import { ICONS_BY_HREF } from '../components/navIcons';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -792,6 +792,52 @@ function MCNavbar({ isMobile }: { isMobile: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const font = "'Source Serif 4', Georgia, serif";
   const mono = "'DM Mono', monospace";
+
+  const renderItem = (item: NavItem) => {
+    if (item.dropdown) {
+      return <MCDropdown key={item.label} label={item.label} items={item.dropdown} isMobile={isMobile} />;
+    }
+    const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
+    return (
+      <a
+        key={item.href}
+        href={item.href}
+        style={{
+          fontFamily: font,
+          fontSize: '0.85rem',
+          color: '#3d3028',
+          opacity: 0.78,
+          padding: '0.45rem 0.6rem',
+          textDecoration: 'none',
+          letterSpacing: '0.04em',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          transition: 'opacity 0.3s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.78')}
+      >
+        {Icon && <Icon size={14} style={{ color: '#8a7a6a' }} />}
+        <span>{item.label}</span>
+      </a>
+    );
+  };
+
+  const title = (
+    <a href="/" style={{
+      fontFamily: font,
+      fontSize: isMobile ? '0.95rem' : '1rem',
+      fontWeight: 400,
+      color: '#3d3028',
+      textDecoration: 'none',
+      letterSpacing: '0.04em',
+      flexShrink: 0,
+    }}>
+      Luna Maltseva
+    </a>
+  );
+
   return (
     <nav style={{
       position: 'fixed',
@@ -804,59 +850,26 @@ function MCNavbar({ isMobile }: { isMobile: boolean }) {
       padding: isMobile ? '0.65rem 1.25rem' : '0.85rem 2rem',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       gap: isMobile ? '0.5rem' : '2rem',
     }}>
-      <a href="/" style={{
-        fontFamily: font,
-        fontSize: isMobile ? '0.95rem' : '1rem',
-        fontWeight: 400,
-        color: '#3d3028',
-        textDecoration: 'none',
-        letterSpacing: '0.04em',
-      }}>
-        Luna Maltseva
-      </a>
-
       {!isMobile ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          {NAV_ITEMS.map((item) => {
-            if (item.dropdown) {
-              return <MCDropdown key={item.label} label={item.label} items={item.dropdown} isMobile={isMobile} />;
-            }
-            const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                style={{
-                  fontFamily: font,
-                  fontSize: '0.85rem',
-                  color: '#3d3028',
-                  opacity: 0.78,
-                  padding: '0.45rem 0.6rem',
-                  textDecoration: 'none',
-                  letterSpacing: '0.04em',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  transition: 'opacity 0.3s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '0.78')}
-              >
-                {Icon && <Icon size={14} style={{ color: '#8a7a6a' }} />}
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
-        </div>
+        <>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
+            {NAV_LEFT.map(renderItem)}
+          </div>
+          {title}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem' }}>
+            {NAV_RIGHT.map(renderItem)}
+          </div>
+        </>
       ) : (
         <>
+          {title}
           <button
             onClick={() => setMenuOpen(o => !o)}
             aria-label="Toggle menu"
-            style={{ background: 'none', border: 'none', color: '#3d3028', padding: '0.35rem', cursor: 'pointer', display: 'flex', marginLeft: 'auto' }}
+            style={{ background: 'none', border: 'none', color: '#3d3028', padding: '0.35rem', cursor: 'pointer', display: 'flex', position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               {menuOpen ? (

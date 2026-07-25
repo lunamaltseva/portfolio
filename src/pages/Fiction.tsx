@@ -21,7 +21,7 @@ export default function Fiction() {
     <div style={{
       position: 'relative',
       backgroundColor: '#000000',
-      minHeight: 'calc(100vh - 150px)',
+      minHeight: 'calc(100vh - 60px)',
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: isMobile ? 'stretch' : 'flex-end',

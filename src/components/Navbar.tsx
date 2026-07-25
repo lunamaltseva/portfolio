@@ -1,41 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { ICONS_BY_HREF } from './navIcons';
-
-interface NavLink {
-  label: string;
-  href: string;
-}
-
-interface NavItem {
-  label: string;
-  href?: string;
-  dropdown?: NavLink[];
-  rightAligned?: boolean;
-}
-
-const navItems: NavItem[] = [
-  { label: 'About Me', href: '/about' },
-  {
-    label: 'Works',
-    dropdown: [
-      { label: 'Academic', href: '/writing/academic' },
-      { label: 'Fiction', href: '/writing/fiction' },
-      { label: 'Design', href: '/design' },
-    ],
-  },
-  {
-    label: 'Programming',
-    dropdown: [
-      { label: 'Artemis CE', href: '/rtmsce' },
-      { label: 'ScheduleWhen', href: 'https://schedulewhen.net' },
-      { label: 'Nuclear Decay Visualizer', href: '/decay' },
-      { label: 'Menstrual Clock', href: '/menstrualclock' },
-      { label: 'Breaking News', href: '/breakingnews' },
-    ],
-  },
-  { label: 'Favorites', href: '/favorites' },
-];
+import { NAV_LEFT as leftItems, NAV_RIGHT as rightItems, type NavLink, type NavItem } from './navData';
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -62,7 +28,7 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-function Dropdown({ label, items, isMobile, onNavigate, rightAligned }: { label: string; items: NavLink[]; isMobile: boolean; onNavigate: () => void; rightAligned?: boolean }) {
+function Dropdown({ label, items, isMobile, onNavigate }: { label: string; items: NavLink[]; isMobile: boolean; onNavigate: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (isMobile) {
@@ -97,13 +63,13 @@ function Dropdown({ label, items, isMobile, onNavigate, rightAligned }: { label:
 
   return (
     <li
-      className={`relative${rightAligned ? ' nav-item-right' : ''}`}
+      className="relative"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
       <span className="nav-link dropdown-toggle">{label}</span>
       <ul
-        className={`dropdown-menu${rightAligned ? ' dropdown-menu-right' : ''} ${isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2.5'}`}
+        className={`dropdown-menu ${isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2.5'}`}
       >
         {items.map((item) => {
           const Icon = ICONS_BY_HREF[item.href];
@@ -121,10 +87,31 @@ function Dropdown({ label, items, isMobile, onNavigate, rightAligned }: { label:
   );
 }
 
+function NavItemNode({ item, isMobile, onNavigate }: { item: NavItem; isMobile: boolean; onNavigate: () => void }) {
+  if (item.dropdown) {
+    return <Dropdown label={item.label} items={item.dropdown} isMobile={isMobile} onNavigate={onNavigate} />;
+  }
+  const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
+  return (
+    <li className="nav-item">
+      <a
+        href={item.href}
+        className="nav-link"
+        onClick={onNavigate}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+      >
+        {Icon && <Icon size={15} />}
+        <span>{item.label}</span>
+      </a>
+    </li>
+  );
+}
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const navRef = useRef<HTMLUListElement>(null);
+  const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
     if (!isMobile) setMenuOpen(false);
@@ -143,63 +130,59 @@ export default function Navbar() {
     return () => document.removeEventListener('click', handleClick);
   }, [menuOpen]);
 
+  const title = (
+    <a href="/" className="navbar-title">
+      Luna Maltseva
+    </a>
+  );
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <a href="/" className="navbar-title">
-          Luna Maltseva
-        </a>
-        <button
-          className="hamburger-btn"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {menuOpen ? (
-              <>
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </>
-            ) : (
-              <>
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </>
-            )}
-          </svg>
-        </button>
-        <ul ref={navRef} className={`navbar-nav${menuOpen ? ' open' : ''}`}>
-          {navItems.map((item) =>
-            item.dropdown ? (
-              <Dropdown
-                key={item.label}
-                label={item.label}
-                items={item.dropdown}
-                isMobile={isMobile}
-                onNavigate={() => setMenuOpen(false)}
-                rightAligned={item.rightAligned}
-              />
-            ) : (
-              (() => {
-                const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
-                return (
-                  <li key={item.href} className="nav-item">
-                    <a
-                      href={item.href}
-                      className="nav-link"
-                      onClick={() => setMenuOpen(false)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
-                      {Icon && <Icon size={15} />}
-                      <span>{item.label}</span>
-                    </a>
-                  </li>
-                );
-              })()
-            )
-          )}
-        </ul>
+        {isMobile ? (
+          <>
+            {title}
+            <button
+              className="hamburger-btn"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle menu"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {menuOpen ? (
+                  <>
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </>
+                )}
+              </svg>
+            </button>
+            <ul ref={navRef} className={`navbar-nav${menuOpen ? ' open' : ''}`}>
+              {[...leftItems, ...rightItems].map((item) => (
+                <NavItemNode key={item.label} item={item} isMobile onNavigate={closeMenu} />
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <ul className="navbar-nav nav-left">
+              {leftItems.map((item) => (
+                <NavItemNode key={item.label} item={item} isMobile={false} onNavigate={closeMenu} />
+              ))}
+            </ul>
+            {title}
+            <ul className="navbar-nav nav-right">
+              {rightItems.map((item) => (
+                <NavItemNode key={item.label} item={item} isMobile={false} onNavigate={closeMenu} />
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </nav>
   );

@@ -78,7 +78,7 @@ a:hover {
 .navbar-container {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   height: 60px;
   gap: 2.5rem;
 }
@@ -88,6 +88,8 @@ a:hover {
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .navbar-nav {
@@ -98,6 +100,14 @@ a:hover {
   margin: 0;
   padding: 0;
   flex: 1;
+}
+
+.navbar-nav.nav-left {
+  justify-content: flex-end;
+}
+
+.navbar-nav.nav-right {
+  justify-content: flex-start;
 }
 
 .nav-item {
@@ -191,7 +201,7 @@ a:hover {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
@@ -459,13 +469,19 @@ a:hover {
   }
 
   .navbar-container {
-    justify-content: space-between;
+    justify-content: center;
+    position: relative;
   }
 
   .hamburger-btn {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
   }
 
   .navbar-nav {

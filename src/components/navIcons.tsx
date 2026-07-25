@@ -123,6 +123,16 @@ export function IconFavorites(props: IconProps) {
   );
 }
 
+export function IconWwwtg(props: IconProps) {
+  return (
+    <svg {...baseSvgProps(props)}>
+      <path d="M4 4v16h16" />
+      <path d="M7 15l3-4 3 2 4-6" />
+      <circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // Map href → icon component for easy lookup by themed navbars.
 export const ICONS_BY_HREF: Record<string, (p: IconProps) => ReactElement> = {
   '/about': IconAboutMe,
@@ -130,6 +140,7 @@ export const ICONS_BY_HREF: Record<string, (p: IconProps) => ReactElement> = {
   '/writing/fiction': IconFiction,
   '/design': IconDesign,
   '/rtmsce': IconArtemis,
+  '/wwwtg': IconWwwtg,
   'https://schedulewhen.net': IconScheduleWhen,
   '/decay': IconDecay,
   '/menstrualclock': IconMenstrualClock,

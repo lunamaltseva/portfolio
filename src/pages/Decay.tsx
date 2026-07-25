@@ -46,7 +46,7 @@ export default function Decay() {
       style={{
         position: 'relative',
         backgroundColor: bgColor,
-        minHeight: 'calc(100vh - 120px)',
+        minHeight: 'calc(100vh - 60px)',
         overflow: 'hidden',
         transition: 'background-color 0.3s ease',
       }}
