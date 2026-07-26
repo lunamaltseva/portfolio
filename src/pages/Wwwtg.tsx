@@ -27,8 +27,8 @@ const C = {
   dim: '#9a9a9a',
   faint: '#5a5a5a',
   off: '#242424',
-  green: '#37f5a0',
-  red: '#ff3b6b',
+  green: '#007e08',
+  red: '#ff0026',
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -47,31 +47,47 @@ interface RoundContent {
 
 const ROUNDS: RoundContent[] = [
   {
-    tagline: 'Tagline for round 1',
+    flawedGraph: '/wwwtg/1b.png',
+    betterGraph: '/wwwtg/1g.png',
+    tagline: 'Never misrepresent data',
     explanation:
-      'Explain what was wrong with the graph and why the corrected version is clearer. (Placeholder — edit ROUNDS[0] in Wwwtg.tsx.)',
+      'When (not if!) that is picked up, it effectively decimates all of your credibility.',
   },
   {
-    tagline: 'Tagline for round 2',
+    flawedGraph: '/wwwtg/2b.png',
+    betterGraph: '/wwwtg/2g.png',
+    tagline: 'Polish your visuals!',
     explanation:
-      'Explain what was wrong with the graph and why the corrected version is clearer. (Placeholder — edit ROUNDS[1] in Wwwtg.tsx.)',
+      'Quality visuals give your readers a reason to care.',
   },
   {
-    tagline: 'Tagline for round 3',
+    flawedGraph: '/wwwtg/3b.png',
+    betterGraph: '/wwwtg/3g.png',
+    tagline: 'Some graphs are better for certain purposes',
     explanation:
-      'Explain what was wrong with the graph and why the corrected version is clearer. (Placeholder — edit ROUNDS[2] in Wwwtg.tsx.)',
+      'Selecting the right visual enhances overall comprehension and retention.',
   },
   {
-    tagline: 'Tagline for round 4',
+    flawedGraph: '/wwwtg/4b.png',
+    betterGraph: '/wwwtg/4g.png',
+    tagline: 'YOU WILL READ THIS FIRST',
     explanation:
-      'Explain what was wrong with the graph and why the corrected version is clearer. (Placeholder — edit ROUNDS[3] in Wwwtg.tsx.)',
+      'And this after that. Visual hierarchy directs attention and thus eases understanding.',
   },
   {
-    tagline: 'Tagline for round 5',
+    flawedGraph: '/wwwtg/5b.png',
+    betterGraph: '/wwwtg/5g.png',
+    tagline: 'Data should tell a story!',
     explanation:
-      'Explain what was wrong with the graph and why the corrected version is clearer. (Placeholder — edit ROUNDS[4] in Wwwtg.tsx.)',
+      'Not doing that is data analysis, not data communication: so put core ideas into the titles of your visuals and slides.',
   },
 ];
+
+// Every image src referenced by a round, so we can preload them all up front
+// and avoid graphs popping in late when a round or the compare view appears.
+const PRELOAD_SRCS: string[] = ROUNDS.flatMap((r) =>
+  [r.flawedGraph, r.betterGraph].filter((g): g is string => typeof g === 'string'),
+);
 
 /* ─────────────────────────────────────────────────────────────────────────
    Marquee light frame
@@ -165,13 +181,14 @@ function LightFrame({
    FIFA-style top bar: round (left) · score (centre) · multiplier (right)
    ───────────────────────────────────────────────────────────────────────── */
 function TopBar({
-  roundIdx, scores, points, answering, isMobile,
+  roundIdx, scores, points, answering, isMobile, teamNames,
 }: {
   roundIdx: number;
   scores: Record<1 | 2, number>;
   points: number;
   answering: 1 | 2 | null;
   isMobile: boolean;
+  teamNames: Record<1 | 2, string>;
 }) {
   const teamCell = (team: 1 | 2): CSSProperties => ({
     fontFamily: DISPLAY,
@@ -204,11 +221,11 @@ function TopBar({
 
       {/* score — centred, FIFA style */}
       <div style={{ justifySelf: 'center', display: 'inline-flex', alignItems: 'center', gap: isMobile ? '0.6rem' : '1.1rem' }}>
-        <span style={teamCell(1)}>TEAM 1</span>
+        <span style={teamCell(1)}>{teamNames[1].toUpperCase()}</span>
         <span style={num(1)}>{scores[1]}</span>
         <span style={{ fontFamily: DISPLAY, color: C.faint, fontSize: isMobile ? '1rem' : '1.4rem' }}>–</span>
         <span style={num(2)}>{scores[2]}</span>
-        <span style={teamCell(2)}>TEAM 2</span>
+        <span style={teamCell(2)}>{teamNames[2].toUpperCase()}</span>
       </div>
 
       {/* multiplier — top right */}
@@ -225,6 +242,38 @@ function TopBar({
 /* ─────────────────────────────────────────────────────────────────────────
    Placeholder graph (square corners)
    ───────────────────────────────────────────────────────────────────────── */
+// Renders a round graph: a string is treated as an image src, any other
+// ReactNode (e.g. inline <svg>) is rendered as-is, and a missing value falls
+// back to the labelled placeholder.
+function RoundGraph({
+  graph, kind, round, isMobile, maxHeight,
+}: {
+  graph?: ReactNode;
+  kind: 'flawed' | 'better';
+  round: number;
+  isMobile: boolean;
+  maxHeight?: string;
+}) {
+  if (graph == null) return <GraphPlaceholder kind={kind} round={round} />;
+  if (typeof graph === 'string') {
+    return (
+      <img
+        src={graph}
+        alt={`${kind} graph for round ${round}`}
+        style={{
+          display: 'block',
+          margin: '0 auto',
+          maxWidth: '100%',
+          maxHeight: maxHeight ?? (isMobile ? '42vh' : '50vh'),
+          objectFit: 'contain',
+          background: C.white,
+        }}
+      />
+    );
+  }
+  return <>{graph}</>;
+}
+
 function GraphPlaceholder({ kind, round }: { kind: 'flawed' | 'better'; round: number }) {
   const bars = kind === 'flawed' ? [40, 44, 41, 47, 43] : [22, 41, 33, 58, 47];
   return (
@@ -328,9 +377,20 @@ export default function Wwwtg() {
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [tick, setTick] = useState(0);
   const [roundResult, setRoundResult] = useState<'won' | 'lost' | null>(null);
+  const [compare, setCompare] = useState(false); // reflection: show bad vs good side by side
+  const [teamNames, setTeamNames] = useState<Record<1 | 2, string>>({ 1: 'Team 1', 2: 'Team 2' });
   const timeupHandled = useRef(false); // guards the once-per-round time-up sequence
 
   const points = POINTS_BY_ROUND[roundIdx];
+
+  // Preload every round graph once on mount so images are already cached by the
+  // time each round (and the compare view) is shown — no late pop-in.
+  useEffect(() => {
+    PRELOAD_SRCS.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   // Always-on animation tick for the flowing idle / celebrate light patterns.
   useEffect(() => {
@@ -354,6 +414,7 @@ export default function Wwwtg() {
     setAnswering(null);
     setFlash(null);
     setRoundResult(null);
+    setCompare(false);
     setShowAnnounce(i === 2 || i === 4); // rounds 3 & 5: announce the points bump
     setPhase('question');
   }, []);
@@ -429,7 +490,7 @@ export default function Wwwtg() {
   // Full-height playfield: top bar, centred middle, controls pinned to bottom.
   const playfield = (middle: ReactNode, controls: ReactNode) => (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', gap: '1.25rem', minHeight: 0 }}>
-      <TopBar roundIdx={roundIdx} scores={scores} points={points} answering={answering} isMobile={isMobile} />
+      <TopBar roundIdx={roundIdx} scores={scores} points={points} answering={answering} isMobile={isMobile} teamNames={teamNames} />
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
         <div style={{ width: '100%', maxWidth: 760 }}>{middle}</div>
       </div>
@@ -478,6 +539,31 @@ export default function Wwwtg() {
     );
     const team1 = 'ABCDEFGHIJK'.split('');
     const team2 = 'LMNOPQRSTUVWXYZ'.split('');
+    const nameField = (team: 1 | 2) => (
+      <input
+        value={teamNames[team]}
+        onChange={(e) => setTeamNames((n) => ({ ...n, [team]: e.target.value }))}
+        maxLength={24}
+        aria-label={`Team ${team} name`}
+        spellCheck={false}
+        style={{
+          fontFamily: DISPLAY,
+          color: C.white,
+          fontSize: isMobile ? '1.3rem' : '1.7rem',
+          letterSpacing: '0.05em',
+          textAlign: 'center',
+          marginBottom: '1rem',
+          background: 'transparent',
+          border: 'none',
+          borderBottom: `2px solid ${C.faint}`,
+          padding: '0.2rem 0.4rem',
+          maxWidth: '100%',
+          outline: 'none',
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderBottomColor = C.white)}
+        onBlur={(e) => (e.currentTarget.style.borderBottomColor = C.faint)}
+      />
+    );
     return (
       <div style={{ margin: 'auto', maxWidth: 820, width: '100%', textAlign: 'center' }}>
         <h2 style={{ fontFamily: DISPLAY, color: C.white, fontSize: isMobile ? '1.9rem' : '2.8rem', margin: '0 0 1.25rem', textShadow: `0 0 16px ${C.white}66` }}>
@@ -488,18 +574,14 @@ export default function Wwwtg() {
         </p>
 
         <div style={{ marginBottom: '2.25rem' }}>
-          <div style={{ fontFamily: DISPLAY, color: C.white, fontSize: isMobile ? '1.3rem' : '1.7rem', marginBottom: '1rem', letterSpacing: '0.05em' }}>
-            Team 1
-          </div>
+          <div>{nameField(1)}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '0.4rem' : '0.6rem', justifyContent: 'center' }}>
             {team1.map(letterTile)}
           </div>
         </div>
 
         <div style={{ marginBottom: '2.75rem' }}>
-          <div style={{ fontFamily: DISPLAY, color: C.white, fontSize: isMobile ? '1.3rem' : '1.7rem', marginBottom: '1rem', letterSpacing: '0.05em' }}>
-            Team 2
-          </div>
+          <div>{nameField(2)}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '0.4rem' : '0.6rem', justifyContent: 'center' }}>
             {team2.map(letterTile)}
           </div>
@@ -527,37 +609,63 @@ export default function Wwwtg() {
       <h2 style={{ fontFamily: DISPLAY, color: C.white, fontSize: isMobile ? '1.4rem' : '2rem', margin: '0 0 1.25rem', textShadow: `0 0 14px ${C.white}55` }}>
         {FLAW_PROMPT}
       </h2>
-      {round.flawedGraph ?? <GraphPlaceholder kind="flawed" round={roundIdx + 1} />}
+      <RoundGraph graph={round.flawedGraph} kind="flawed" round={roundIdx + 1} isMobile={isMobile} />
+
       <div style={{ fontFamily: BODY, color: C.dim, fontSize: '0.8rem', minHeight: '1.2rem', marginTop: '0.9rem' }}>
         {flash === 'timeup' ? "Time's up!" : ''}
       </div>
     </div>,
     answering === null ? (
       <>
-        <Btn onClick={() => setAnswering(1)} tone="ghost">TEAM 1 IS ANSWERING</Btn>
-        <Btn onClick={() => setAnswering(2)} tone="ghost">TEAM 2 IS ANSWERING</Btn>
+        <Btn onClick={() => setAnswering(1)} tone="ghost">{teamNames[1].toUpperCase()} BUZZED</Btn>
+        <Btn onClick={() => setAnswering(2)} tone="ghost">{teamNames[2].toUpperCase()} BUZZED</Btn>
       </>
     ) : (
       <>
-        <Btn onClick={acceptAnswer} tone="green">✓ ACCEPT ANSWER</Btn>
-        <Btn onClick={rejectAnswer} tone="red">✗ REJECT ANSWER</Btn>
+        <Btn onClick={acceptAnswer} tone="green">ACCEPT</Btn>
+        <Btn onClick={rejectAnswer} tone="red">REJECT</Btn>
       </>
     ),
   );
 
+  const graphCaption = (color: string): CSSProperties => ({
+    fontFamily: DISPLAY,
+    fontSize: isMobile ? '0.8rem' : '0.95rem',
+    letterSpacing: '0.08em',
+    color,
+    textAlign: 'center',
+    marginTop: '0.6rem',
+  });
+
   const renderReflection = () => playfield(
-    <div>
+    <div style={{ maxWidth: compare ? 1100 : undefined, margin: '0 auto' }}>
       <h2 style={{ fontFamily: DISPLAY, color: C.white, fontSize: isMobile ? '1.5rem' : '2.1rem', margin: '0 0 0.75rem', textShadow: `0 0 14px ${C.white}55` }}>
         {round.tagline}
       </h2>
       <p style={{ fontFamily: BODY, color: C.dim, fontSize: isMobile ? '0.95rem' : '1.05rem', lineHeight: 1.6, margin: '0 0 1.25rem' }}>
         {round.explanation}
       </p>
-      {round.betterGraph ?? <GraphPlaceholder kind="better" round={roundIdx + 1} />}
+      {compare ? (
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '1.25rem' : '1.75rem', alignItems: 'flex-start' }}>
+          <figure style={{ flex: 1, minWidth: 0, margin: 0 }}>
+            <RoundGraph graph={round.flawedGraph} kind="flawed" round={roundIdx + 1} isMobile={isMobile} maxHeight={isMobile ? '32vh' : '46vh'} />
+          </figure>
+          <figure style={{ flex: 1, minWidth: 0, margin: 0 }}>
+            <RoundGraph graph={round.betterGraph} kind="better" round={roundIdx + 1} isMobile={isMobile} maxHeight={isMobile ? '32vh' : '46vh'} />
+          </figure>
+        </div>
+      ) : (
+        <RoundGraph graph={round.betterGraph} kind="better" round={roundIdx + 1} isMobile={isMobile} />
+      )}
     </div>,
-    <Btn onClick={nextRound} big>
-      {roundIdx < ROUNDS.length - 1 ? 'NEXT ROUND ▶' : 'REVEAL THE WINNER ▶'}
-    </Btn>,
+    <>
+      <Btn onClick={() => setCompare((c) => !c)} tone="ghost">
+        {compare ? 'COMPARE ◧' : 'COMPARE ◧'}
+      </Btn>
+      <Btn onClick={nextRound} big>
+        {roundIdx < ROUNDS.length - 1 ? 'NEXT ROUND ▶' : 'REVEAL THE WINNER ▶'}
+      </Btn>
+    </>,
   );
 
   const renderWinner = () => {
@@ -574,7 +682,7 @@ export default function Wwwtg() {
           color: C.white,
           textShadow: `0 0 24px ${winner === 0 ? C.white : C.green}cc`,
         }}>
-          {winner === 0 ? "It's a tie!" : `Team ${winner} wins!`}
+          {winner === 0 ? "It's a tie!" : `${teamNames[winner as 1 | 2]} wins!`}
         </h1>
         <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '2rem', flexWrap: 'wrap' }}>
           {([1, 2] as const).map((team) => (
@@ -586,7 +694,7 @@ export default function Wwwtg() {
               boxShadow: winner === team ? `0 0 30px ${C.green}88` : 'none',
             }}>
               <div style={{ fontFamily: BODY, color: C.white, fontWeight: 600, textTransform: 'uppercase', fontSize: '0.85rem' }}>
-                Team {team}
+                {teamNames[team]}
               </div>
               <div style={{ fontFamily: DISPLAY, color: C.white, fontSize: '3rem', lineHeight: 1.1 }}>{scores[team]}</div>
             </div>
