@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
+
+// Chapter II release: July 31st 18:00 GMT+6 == 12:00 UTC
+const RELEASE_TIME = Date.UTC(2026, 6, 31, 12, 0, 0);
 
 const READING_RULES: { title: string; body: string }[] = [
   { title: 'Section, intermezzo, chapter, intermezzo, chapter...', body: 'Every section opens and closes with an intermezzo. Chapters always have intermezzoes between them.' },
@@ -14,6 +18,51 @@ export default function Fiction() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const isMobile = useIsMobile();
+
+  // Sync the clock to a trusted network time source so the release can't be
+  // unlocked early (or hidden) by changing the device clock. We keep the offset
+  // between server time and the local clock and apply it to every tick.
+  const offsetRef = useRef(0);
+  const [now, setNow] = useState(() => Date.now());
+  const [syncDone, setSyncDone] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const sources: { url: string; pick: (d: any) => number }[] = [
+      { url: 'https://worldtimeapi.org/api/timezone/Etc/UTC', pick: (d) => d.unixtime * 1000 },
+      { url: 'https://timeapi.io/api/Time/current/zone?timeZone=UTC', pick: (d) => Date.parse(d.dateTime + 'Z') },
+    ];
+    (async () => {
+      for (const s of sources) {
+        try {
+          const res = await fetch(s.url, { cache: 'no-store' });
+          if (!res.ok) continue;
+          const serverMs = s.pick(await res.json());
+          if (!Number.isFinite(serverMs)) continue;
+          if (!cancelled) {
+            offsetRef.current = serverMs - Date.now();
+            setNow(Date.now() + offsetRef.current);
+          }
+          break;
+        } catch {
+          /* fall through to the next source */
+        }
+      }
+      if (!cancelled) setSyncDone(true);
+    })();
+    const id = setInterval(() => setNow(Date.now() + offsetRef.current), 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const remaining = Math.max(0, RELEASE_TIME - now);
+  // Only trust a "released" state once we've reconciled with server time, so a
+  // fast-forwarded local clock can't flash the released view before sync lands.
+  const isReleased = remaining === 0 && syncDone;
+  const totalSeconds = Math.floor(remaining / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const currentPdf = isReleased ? "/Thezeraine2.pdf" : "/Thezeraine.pdf";
 
   const fullSummary = "A bereft young woman agrees to venture into an emerging civil war for the promise of a resurrection device.";
 
@@ -43,33 +92,59 @@ export default function Fiction() {
         }} />
       )}
       {isMobile ? (
-        <img
-          src="/design/Chapter II preview.png"
-          alt="Chapter II preview"
-          style={{
-            width: '100%',
-            height: 'auto',
-            objectFit: 'contain',
-            display: 'block',
-            margin: 'auto 0'
-          }}
-        />
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.5rem',
+          margin: 'auto 0'
+        }}>
+          <img
+            src="/design/Chapter II preview.png"
+            alt="Chapter II preview"
+            style={{
+              width: '100%',
+              height: 'auto',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+          />
+          {isReleased ? (
+            <SpotifyLink isMobile={isMobile} />
+          ) : (
+            <Countdown hours={hours} minutes={minutes} seconds={seconds} isMobile={isMobile} />
+          )}
+        </div>
       ) : (
-        <img
-          src="/design/Chapter II preview.png"
-          alt="Chapter II preview"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            right: '12rem',
-            transform: 'translateY(-50%)',
-            maxHeight: '95%',
-            maxWidth: '55%',
-            objectFit: 'contain',
-            zIndex: 2,
-            pointerEvents: 'none'
-          }}
-        />
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          right: '12rem',
+          transform: 'translateY(-50%)',
+          maxWidth: '55%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2rem',
+          zIndex: 2
+        }}>
+          <img
+            src="/design/Chapter II preview.png"
+            alt="Chapter II preview"
+            style={{
+              maxHeight: isReleased ? '85vh' : '60vh',
+              maxWidth: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              pointerEvents: 'none'
+            }}
+          />
+          {isReleased ? (
+            <SpotifyLink isMobile={isMobile} />
+          ) : (
+            <Countdown hours={hours} minutes={minutes} seconds={seconds} isMobile={isMobile} />
+          )}
+        </div>
       )}
       <div style={{ maxWidth: isMobile ? '100%' : '600px', position: 'relative', zIndex: 2 }}>
         <h1 style={{
@@ -134,7 +209,7 @@ export default function Fiction() {
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span>~44m</span>
+            <span>~1h 28m</span>
           </div>
         </div>
 
@@ -182,9 +257,9 @@ export default function Fiction() {
           {fullSummary}
         </p>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
           <a
-            href="/Thezeraine.pdf"
+            href={currentPdf}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -219,6 +294,45 @@ export default function Fiction() {
             Read
           </a>
 
+          <a
+            href={currentPdf}
+            download
+            aria-label="Download the current version"
+            title="Download the current version"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '3.25rem',
+              height: '3.25rem',
+              boxSizing: 'border-box',
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+              opacity: 1,
+              border: '1px solid #ffffff',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.color = '#000000'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ffffff'; }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </a>
+
           <button
             onClick={() => setShowGuide(true)}
             style={{
@@ -251,7 +365,7 @@ export default function Fiction() {
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
-            Guide to Reading
+            Guide
           </button>
         </div>
       </div>
@@ -259,6 +373,104 @@ export default function Fiction() {
       {showGuide && (
         <ReadingGuideModal onClose={() => setShowGuide(false)} isMobile={isMobile} />
       )}
+    </div>
+  );
+}
+
+function SpotifyLink({ isMobile }: { isMobile: boolean }) {
+  return (
+    <iframe
+      src="https://open.spotify.com/embed/track/0az7v5wI8xjgfzXBfWRhVd?utm_source=generator"
+      width={isMobile ? '100%' : '400'}
+      height="152"
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="lazy"
+      title="Spotify player"
+      style={{ border: 0, borderRadius: '12px', display: 'block', width: isMobile ? '100%' : '400px', maxWidth: '100%' }}
+    />
+  );
+}
+
+function Countdown({ hours, minutes, seconds, isMobile }: { hours: number; minutes: number; seconds: number; isMobile: boolean }) {
+  useEffect(() => {
+    if (document.getElementById('thz-rolldown-kf')) return;
+    const el = document.createElement('style');
+    el.id = 'thz-rolldown-kf';
+    el.textContent = '@keyframes thz-rolldown{from{transform:translateY(-50%)}to{transform:translateY(0)}}';
+    document.head.appendChild(el);
+  }, []);
+
+  const cellHeight = isMobile ? 56 : 82;
+  const cellStyle: CSSProperties = {
+    fontSize: isMobile ? '2.75rem' : '4rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    lineHeight: 1,
+    fontVariantNumeric: 'tabular-nums',
+    minWidth: isMobile ? '3rem' : '4.4rem',
+  };
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const units = [
+    { value: pad(hours), label: 'hrs' },
+    { value: pad(minutes), label: 'min' },
+    { value: pad(seconds), label: 'sec' },
+  ];
+
+  const colon = (
+    <div style={{ ...cellStyle, minWidth: 'auto', height: cellHeight, display: 'flex', alignItems: 'center' }}>:</div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? '0.9rem' : '1.1rem' }}>
+      <span style={{
+        color: '#d3d3d3',
+        fontSize: isMobile ? '0.95rem' : '1.1rem',
+        letterSpacing: '0.06em',
+      }}>
+        Chapter II releases in...
+      </span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '0.4rem' : '0.6rem' }}>
+        {units.map((u, i) => (
+          <div key={u.label} style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '0.4rem' : '0.6rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+              <RollDown value={u.value} cellHeight={cellHeight} cellStyle={cellStyle} />
+              <span style={{ color: '#888', fontSize: isMobile ? '0.65rem' : '0.75rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                {u.label}
+              </span>
+            </div>
+            {i < units.length - 1 && colon}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// A vertically-clipped cell whose value slides down into place when it changes.
+// Stateless w.r.t. the animation: `value` is always rendered directly and the
+// slide is a fire-and-forget CSS animation keyed on `value`, so nothing can wedge.
+function RollDown({ value, cellHeight, cellStyle }: { value: string; cellHeight: number; cellStyle: CSSProperties }) {
+  const prevRef = useRef(value);
+  const prev = prevRef.current;
+  useEffect(() => { prevRef.current = value; });
+
+  const cell = (v: string) => (
+    <div style={{ ...cellStyle, height: cellHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {v}
+    </div>
+  );
+
+  // Track holds [new (top), old (bottom)]; the keyframe slides it down from
+  // showing `prev` to showing `value`. Remounting via key restarts the slide.
+  return (
+    <div style={{ height: cellHeight, overflow: 'hidden' }}>
+      <div
+        key={value}
+        style={{ animation: prev !== value ? 'thz-rolldown 0.5s cubic-bezier(0.16, 1, 0.3, 1) both' : 'none' }}
+      >
+        {cell(value)}
+        {cell(prev)}
+      </div>
     </div>
   );
 }
@@ -341,7 +553,6 @@ function ReadingGuideModal({ onClose, isMobile }: { onClose: () => void; isMobil
             {READING_RULES.map((rule, i) => (
               <div key={i} style={{ display: 'flex', gap: '0.9rem' }}>
                 <span style={{
-                  fontFamily: 'Thezeraine, serif',
                   color: '#666',
                   fontSize: '1.2rem',
                   minWidth: '1.5rem',

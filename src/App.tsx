@@ -34,6 +34,7 @@ function App() {
             } />
             <Route path="/about" element={<About />} />
             <Route path="/writing/fiction" element={<Fiction />} />
+            <Route path="/thz" element={<Fiction />} />
             <Route path="/writing/academic" element={<Academic />} />
             <Route path="/design" element={<Design />} />
             <Route path="/favorites" element={<Favorites />} />
