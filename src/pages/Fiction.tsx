@@ -3,9 +3,6 @@ import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-// Chapter II release: July 31st 18:00 GMT+6 == 12:00 UTC
-const RELEASE_TIME = Date.UTC(2026, 6, 31, 12, 0, 0);
-
 const READING_RULES: { title: string; body: string }[] = [
   { title: 'Section, intermezzo, chapter, intermezzo, chapter...', body: 'Every section opens and closes with an intermezzo. Chapters always have intermezzoes between them.' },
   { title: 'Sections', body: 'Every section has an odd number of chapters and even number of intermezzoes. The central subject of intermezzoes alter in every section.' },
@@ -19,50 +16,7 @@ export default function Fiction() {
   const [showGuide, setShowGuide] = useState(false);
   const isMobile = useIsMobile();
 
-  // Sync the clock to a trusted network time source so the release can't be
-  // unlocked early (or hidden) by changing the device clock. We keep the offset
-  // between server time and the local clock and apply it to every tick.
-  const offsetRef = useRef(0);
-  const [now, setNow] = useState(() => Date.now());
-  const [syncDone, setSyncDone] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    const sources: { url: string; pick: (d: any) => number }[] = [
-      { url: 'https://worldtimeapi.org/api/timezone/Etc/UTC', pick: (d) => d.unixtime * 1000 },
-      { url: 'https://timeapi.io/api/Time/current/zone?timeZone=UTC', pick: (d) => Date.parse(d.dateTime + 'Z') },
-    ];
-    (async () => {
-      for (const s of sources) {
-        try {
-          const res = await fetch(s.url, { cache: 'no-store' });
-          if (!res.ok) continue;
-          const serverMs = s.pick(await res.json());
-          if (!Number.isFinite(serverMs)) continue;
-          if (!cancelled) {
-            offsetRef.current = serverMs - Date.now();
-            setNow(Date.now() + offsetRef.current);
-          }
-          break;
-        } catch {
-          /* fall through to the next source */
-        }
-      }
-      if (!cancelled) setSyncDone(true);
-    })();
-    const id = setInterval(() => setNow(Date.now() + offsetRef.current), 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
-
-  const remaining = Math.max(0, RELEASE_TIME - now);
-  // Only trust a "released" state once we've reconciled with server time, so a
-  // fast-forwarded local clock can't flash the released view before sync lands.
-  const isReleased = remaining === 0 && syncDone;
-  const totalSeconds = Math.floor(remaining / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  const currentPdf = isReleased ? "/Thezeraine2.pdf" : "/Thezeraine.pdf";
+  const currentPdf = "/Thezeraine%20Chapter%20II%20July%202026.pdf.pdf";
 
   const fullSummary = "A bereft young woman agrees to venture into an emerging civil war for the promise of a resurrection device.";
 
@@ -109,11 +63,7 @@ export default function Fiction() {
               display: 'block'
             }}
           />
-          {isReleased ? (
-            <SpotifyLink isMobile={isMobile} />
-          ) : (
-            <Countdown hours={hours} minutes={minutes} seconds={seconds} isMobile={isMobile} />
-          )}
+          <Countdown hours={0} minutes={0} seconds={0} isMobile={isMobile} />
         </div>
       ) : (
         <div style={{
@@ -132,18 +82,14 @@ export default function Fiction() {
             src="/design/Chapter II preview.png"
             alt="Chapter II preview"
             style={{
-              maxHeight: isReleased ? '85vh' : '60vh',
+              maxHeight: '60vh',
               maxWidth: '100%',
               objectFit: 'contain',
               display: 'block',
               pointerEvents: 'none'
             }}
           />
-          {isReleased ? (
-            <SpotifyLink isMobile={isMobile} />
-          ) : (
-            <Countdown hours={hours} minutes={minutes} seconds={seconds} isMobile={isMobile} />
-          )}
+          <Countdown hours={0} minutes={0} seconds={0} isMobile={isMobile} />
         </div>
       )}
       <div style={{ maxWidth: isMobile ? '100%' : '600px', position: 'relative', zIndex: 2 }}>
@@ -374,20 +320,6 @@ export default function Fiction() {
         <ReadingGuideModal onClose={() => setShowGuide(false)} isMobile={isMobile} />
       )}
     </div>
-  );
-}
-
-function SpotifyLink({ isMobile }: { isMobile: boolean }) {
-  return (
-    <iframe
-      src="https://open.spotify.com/embed/track/0az7v5wI8xjgfzXBfWRhVd?utm_source=generator"
-      width={isMobile ? '100%' : '400'}
-      height="152"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      loading="lazy"
-      title="Spotify player"
-      style={{ border: 0, borderRadius: '12px', display: 'block', width: isMobile ? '100%' : '400px', maxWidth: '100%' }}
-    />
   );
 }
 
