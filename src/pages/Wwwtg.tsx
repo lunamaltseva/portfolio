@@ -49,37 +49,37 @@ const ROUNDS: RoundContent[] = [
   {
     flawedGraph: '/wwwtg/1b.png',
     betterGraph: '/wwwtg/1g.png',
-    tagline: 'Never misrepresent data',
+    tagline: 'Never lie with data!',
     explanation:
-      'When (not if!) that is picked up, it effectively decimates all of your credibility.',
+      'It decimates all of your credibility and brings you into a fight.',
   },
   {
     flawedGraph: '/wwwtg/2b.png',
     betterGraph: '/wwwtg/2g.png',
-    tagline: 'Polish your visuals!',
+    tagline: 'Clutter is your enemy!',
     explanation:
-      'Quality visuals give your readers a reason to care.',
+      'There is a finite amount of attention your viewers can give to the graph. Utilize it wisely to build a point.',
   },
   {
     flawedGraph: '/wwwtg/3b.png',
     betterGraph: '/wwwtg/3g.png',
-    tagline: 'Some graphs are better for certain purposes',
+    tagline: 'Different purposes, different graphs',
     explanation:
-      'Selecting the right visual enhances overall comprehension and retention.',
+      'Selecting the right visual is paramount to enhancing viewer comprehension and retention.',
   },
   {
     flawedGraph: '/wwwtg/4b.png',
     betterGraph: '/wwwtg/4g.png',
-    tagline: 'YOU WILL READ THIS FIRST',
+    tagline: 'Structure your narrative!',
     explanation:
-      'And this after that. Visual hierarchy directs attention and thus eases understanding.',
+      'A graph is like a story. Institute a visual hierarchy to make it easy to follow.',
   },
   {
     flawedGraph: '/wwwtg/5b.png',
     betterGraph: '/wwwtg/5g.png',
-    tagline: 'Data should tell a story!',
+    tagline: 'Always tell a story!',
     explanation:
-      'Not doing that is data analysis, not data communication: so put core ideas into the titles of your visuals and slides.',
+      'Without a story, you are doing data analysis, not data communication. If you want people to have a takeaway: tell them what it is.',
   },
 ];
 
@@ -627,15 +627,6 @@ export default function Wwwtg() {
       </>
     ),
   );
-
-  const graphCaption = (color: string): CSSProperties => ({
-    fontFamily: DISPLAY,
-    fontSize: isMobile ? '0.8rem' : '0.95rem',
-    letterSpacing: '0.08em',
-    color,
-    textAlign: 'center',
-    marginTop: '0.6rem',
-  });
 
   const renderReflection = () => playfield(
     <div style={{ maxWidth: compare ? 1100 : undefined, margin: '0 auto' }}>

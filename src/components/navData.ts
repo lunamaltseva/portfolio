@@ -29,7 +29,7 @@ export const NAV_RIGHT: NavItem[] = [
     label: 'Projects',
     dropdown: [
       { label: 'Artemis CE', href: '/rtmsce' },
-      { label: "What's Wrong with That Graph?", href: '/wwwtg' },
+      //{ label: "What's Wrong with That Graph?", href: '/wwwtg' },
       { label: 'ScheduleWhen', href: 'https://schedulewhen.net', external: true },
       { label: 'Nuclear Decay Visualizer', href: '/decay' },
       { label: 'Menstrual Clock', href: '/menstrualclock' },
