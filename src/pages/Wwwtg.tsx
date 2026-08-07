@@ -98,10 +98,10 @@ const TITLE_WORDS = [
   { t: "What's", delay: 0.0,  dur: 0.5 },
   { t: 'Wrong',  delay: 0.5,  dur: 0.90 },
   { t: 'with',   delay: 1.4,  dur: 0.65 },
-  { t: 'THAT',   delay: 2.05, dur: 0.17 },
+  { t: 'THAT',   delay: 1.9, dur: 0.1 },
 ];
-const GRAPH_DELAY = 2.22;
-const GRAPH_DUR = 2.05;
+const GRAPH_DELAY = 2;
+const GRAPH_DUR = 1.5;
 const CURTAIN_MS = 1300; // must match the curtain slide transition
 const TITLE_TIMELINE_MS = (GRAPH_DELAY + GRAPH_DUR) * 1000 + 150;
 
@@ -621,7 +621,7 @@ export default function Wwwtg() {
       <div style={{ maxWidth: '70vw', width: '100%', margin: '0 auto', textAlign: 'center' }}>
         <h2 style={{ fontFamily: SANS, fontWeight: 800, color: C.blue, fontSize: '4rem', margin: '0 0 2rem' }}>The Rules</h2>
         <Paragraph
-          text="Each round, a graph with an obvious flaw is presented. The first person to buzz in with an answer wins their team points. The difficulty and point rewards increase over time. The team with the most points wins."
+          text="Each round, a graph with an obvious flaw is presented. The first person to buzz in with a correct fix earns their team a point. The difficulty and point rewards increase over time. The team with the most points wins."
           style={{ maxWidth: '70vw', margin: '0 auto', fontSize: '2rem', lineHeight: 1.6 }}
         />
       </div>

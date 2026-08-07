@@ -494,8 +494,8 @@ function EntryAccordion({ entry, defaultOpen, isMobile }: {
 function Catalog({ isMobile }: { isMobile: boolean }) {
   return (
     <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
+      display: 'grid',
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
       gap: '0.6rem',
       margin: '0 0 3rem 0',
     }}>
@@ -510,6 +510,7 @@ function Catalog({ isMobile }: { isMobile: boolean }) {
           style={{
             display: 'inline-flex',
             alignItems: 'baseline',
+            justifyContent: 'center',
             gap: '0.45rem',
             padding: isMobile ? '0.5rem 0.85rem' : '0.55rem 1rem',
             border: '1px solid #222',

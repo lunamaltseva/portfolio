@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const SKILLS: { category: string; items: string[] }[] = [
-  { category: 'Programming', items: ['C', 'C++', 'raylib', 'Qt', 'Python', 'Scikit-Learn', 'Typescript', 'React', 'Linux', 'Cisco IOS'] },
-  { category: 'Design', items: ['Blender', 'aseprite', 'Photoshop', 'Illustrator', 'InDesign', 'VEGAS Pro', 'Figma'] },
+  { category: 'Programming', items: ['Python', 'PostgreSQL', 'Docker', 'Typescript', 'React', 'C', 'Linux', 'C++', 'Qt', 'Cisco IOS'] },
+  { category: 'Design', items: ['Photoshop', 'Illustrator', 'InDesign', 'VEGAS Pro', 'Blender'] },
   { category: 'Writing', items: ['Research', 'Fiction', 'Journalism'] },
 ];
 
@@ -67,7 +67,7 @@ export default function About() {
           lineHeight: '1.6',
           margin: '1.25rem 0 0 0',
         }}>
-          My name is Luna Maltseva. I grew up between the United Kingdom and the Kyrgyz Republic, and as a result speak both English and Russian fluently. At the moment, I am doing an undergrad in Software Engineering at the American University of Central Asia, specializing in Data Science. I am active in the field of Civic Engagement, I mentor others as a Peer Advisor and a Teaching Assistant, and I do research, journalism, business coordination, and content creation as a side-kick. If you ever have a hackathon to win: you know whom to message ;)
+          My name is Luna Maltseva. I grew up between the United Kingdom and the Kyrgyz Republic, and as a result speak both English and Russian fluently. At the moment, I am doing an undergrad in Software Engineering at the American University of Central Asia, specializing in Data Analysis. I am active in the field of Civic Engagement, I mentor others as a Peer Advisor and a Teaching Assistant, and I do research, journalism, business coordination, and content creation as a side-kick. 'Bonum per definitionem' is my coat of arms.
         </p>
 
         <div style={{

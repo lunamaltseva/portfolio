@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { ICONS_BY_HREF } from './navIcons';
-import { NAV_LEFT as leftItems, NAV_RIGHT as rightItems, type NavLink, type NavItem } from './navData';
+import { NAV_LEFT as leftItems, NAV_RIGHT as rightItems, NAV_ITEMS, type NavLink, type NavItem } from './navData';
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -110,7 +110,7 @@ function NavItemNode({ item, isMobile, onNavigate }: { item: NavItem; isMobile: 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const navRef = useRef<HTMLUListElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
   const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
@@ -162,11 +162,45 @@ export default function Navbar() {
                 )}
               </svg>
             </button>
-            <ul ref={navRef} className={`navbar-nav${menuOpen ? ' open' : ''}`}>
-              {[...leftItems, ...rightItems].map((item) => (
-                <NavItemNode key={item.label} item={item} isMobile onNavigate={closeMenu} />
-              ))}
-            </ul>
+            {menuOpen && (
+              <div ref={navRef} className="mobile-menu">
+                {NAV_ITEMS.flatMap((item) => {
+                  if (item.dropdown) {
+                    return [
+                      <div key={`cat-${item.label}`} className="mobile-menu-category">{item.label}</div>,
+                      ...item.dropdown.map((sub) => {
+                        const Icon = ICONS_BY_HREF[sub.href];
+                        return (
+                          <a
+                            key={sub.href}
+                            href={sub.href}
+                            target={sub.external ? '_blank' : undefined}
+                            rel={sub.external ? 'noopener noreferrer' : undefined}
+                            onClick={closeMenu}
+                            className="mobile-menu-item mobile-menu-subitem"
+                          >
+                            {Icon && <Icon size={16} />}
+                            <span>{sub.label}</span>
+                          </a>
+                        );
+                      }),
+                    ];
+                  }
+                  const Icon = item.href ? ICONS_BY_HREF[item.href] : undefined;
+                  return [
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMenu}
+                      className="mobile-menu-item mobile-menu-toplevel"
+                    >
+                      {Icon && <Icon size={16} />}
+                      <span>{item.label}</span>
+                    </a>,
+                  ];
+                })}
+              </div>
+            )}
           </>
         ) : (
           <>

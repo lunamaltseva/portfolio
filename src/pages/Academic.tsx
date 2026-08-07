@@ -572,7 +572,7 @@ function Catalogue({ isMobile, onJump }: { isMobile: boolean; onJump: (id: strin
       </div>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : `repeat(${sections.length}, 1fr)`,
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
         gap: '0.5rem',
       }}>
         {sections.map((s) => {
