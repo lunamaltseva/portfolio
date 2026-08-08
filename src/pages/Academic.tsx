@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -268,6 +268,7 @@ function PaperWidget({
   isMobile: boolean;
 }) {
   const viewportWidth = useViewportWidth();
+  const widgetRef = useRef<HTMLDivElement>(null);
   const thumbWidth = isMobile ? THUMB_WIDTH_MOBILE : THUMB_WIDTH_DESKTOP;
   const thumbHeight = Math.round(thumbWidth * LETTER_RATIO);
   const widgetHeight = thumbHeight + TITLE_BAR_HEIGHT;
@@ -276,8 +277,21 @@ function PaperWidget({
     PANEL_MIN,
     Math.min(PANEL_WIDTH_DESKTOP, viewportWidth - thumbWidth - VIEWPORT_PADDING),
   );
+
+  // When a widget expands past the edge of the screen, bring it back into view.
+  useEffect(() => {
+    if (!expanded) return;
+    const el = widgetRef.current;
+    if (!el) return;
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+    }, 470); // wait out the 450ms width transition
+    return () => clearTimeout(t);
+  }, [expanded]);
+
   return (
     <div
+      ref={widgetRef}
       id={slug(item.title)}
       style={{
         display: 'flex',
@@ -476,21 +490,11 @@ function Shelf({ section, expandedIds, toggleExpanded, isMobile }: {
         }}>
           {section.title}
         </h2>
-        <span style={{
-          color: '#777',
-          fontSize: '0.72rem',
-          fontFamily: 'var(--font-primary)',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-        }}>
-          {section.items.length} {section.items.length === 1 ? 'volume' : 'volumes'}
-        </span>
       </div>
       <p style={{
-        color: '#888',
-        fontSize: '0.88rem',
-        fontFamily: 'var(--font-primary)',
-        margin: '0 0 0.6rem 0.25rem',
+        color: '#666',
+        fontSize: '0.9rem',
+        margin: '0 0 1.25rem 0.25rem',
       }}>
         {section.description}
       </p>
@@ -532,101 +536,48 @@ function Shelf({ section, expandedIds, toggleExpanded, isMobile }: {
   );
 }
 
-function Catalogue({ isMobile, onJump }: { isMobile: boolean; onJump: (id: string) => void }) {
-  const total = useMemo(() => sections.reduce((s, x) => s + x.items.length, 0), []);
+function Catalogue({ isMobile }: { isMobile: boolean }) {
   return (
     <div style={{
-      background: '#0a0a0a',
-      border: '1px solid rgba(255,255,255,0.12)',
-      borderRadius: '2px',
-      padding: isMobile ? '1rem' : '1.25rem 1.5rem',
-      marginBottom: '2.5rem',
+      display: 'grid',
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+      gap: '0.6rem',
+      margin: '0 0 2.5rem 0',
     }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        flexWrap: 'wrap',
-        marginBottom: '0.95rem',
-      }}>
-        <div style={{
-          fontFamily: 'var(--font-title)',
-          fontWeight: 700,
-          fontSize: isMobile ? '0.95rem' : '1.05rem',
-          letterSpacing: '0.24em',
-          textTransform: 'uppercase',
-          color: '#f5f5f5',
-        }}>
-          The Catalogue
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-primary)',
-          fontSize: '0.7rem',
-          color: '#777',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-        }}>
-          {total} entries · {sections.length} shelves
-        </div>
-      </div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-        gap: '0.5rem',
-      }}>
-        {sections.map((s) => {
-          const id = slug(s.title);
-          return (
-            <button
-              key={s.title}
-              onClick={() => {
-                onJump(id);
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              style={{
-                textAlign: 'left',
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '2px',
-                padding: '0.65rem 0.8rem',
-                cursor: 'pointer',
-                color: '#ddd',
-                fontFamily: 'var(--font-primary)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.15rem',
-                transition: 'background-color 0.18s ease, border-color 0.18s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-              }}
-            >
-              <span style={{
-                fontFamily: 'var(--font-primary)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                color: '#f5f5f5',
-              }}>
-                {s.title}
-              </span>
-              <span style={{
-                fontSize: '0.68rem',
-                color: '#777',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-              }}>
-                {s.items.length} {s.items.length === 1 ? 'volume' : 'volumes'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {sections.map((section) => {
+        const id = slug(section.title);
+        return (
+          <a
+            key={section.title}
+            href={`#${id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.45rem',
+              padding: isMobile ? '0.5rem 0.85rem' : '0.55rem 1rem',
+              border: '1px solid #222',
+              borderRadius: '2rem',
+              backgroundColor: '#121212',
+              color: '#ddd',
+              fontSize: '0.9rem',
+              fontFamily: 'var(--font-primary)',
+              fontWeight: 700,
+              textDecoration: 'none',
+              textAlign: 'center',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#ddd'; }}
+          >
+            {section.title}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -658,19 +609,18 @@ export default function Academic() {
           color: '#f5f5f5',
           margin: 0,
         }}>
-          Academic Writing Library
+          Academic Writing
         </h1>
         <p style={{
           color: '#888',
-          fontSize: isMobile ? '0.9rem' : '1rem',
+          fontSize: isMobile ? '0.95rem' : '1.05rem',
           margin: '0.4rem 0 0 0',
-          fontFamily: 'var(--font-primary)',
         }}>
-          A curated list of my publications, research, essays, articles, &c.
+          A curated list of my academic writing.
         </p>
       </header>
 
-      <Catalogue isMobile={isMobile} onJump={() => {}} />
+      <Catalogue isMobile={isMobile} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
         {sections.map((section) => (

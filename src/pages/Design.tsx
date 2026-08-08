@@ -30,7 +30,7 @@ const sections: DesignSection[] = [
   {
     title: 'Thezeraine',
     description: 'Art for the Thezeraine Book Universe',
-    date: '2018 — Present',
+    date: '2025 — Present',
     items: [
       {
         title: 'Book Cover',

@@ -635,8 +635,8 @@ a:hover {
   }
 
   .moon-stage {
-    width: min(88vw, 26rem);
-    height: min(88vw, 26rem);
+    width: min(74vw, 21rem);
+    height: min(74vw, 21rem);
   }
 
   .moon-caption {
@@ -649,7 +649,7 @@ a:hover {
 @media (max-width: 520px) {
   .moon-links {
     display: grid;
-    grid-template-columns: minmax(0, 15rem);
+    grid-template-columns: minmax(0, 12rem);
     justify-content: center;
     width: 100%;
   }
@@ -657,5 +657,7 @@ a:hover {
   .moon-link {
     width: 100%;
     justify-content: center;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.88rem;
   }
 }
